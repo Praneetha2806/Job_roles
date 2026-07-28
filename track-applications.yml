@@ -1,0 +1,45 @@
+name: Track Job Applications
+
+on:
+  schedule:
+    # 23:55 America/Los_Angeles.
+    # GitHub Actions cron is UTC only, so this covers PDT (UTC-7); during PST
+    # (UTC-8, roughly Nov-Mar) it will run at ~22:55 PT instead. Adjust the
+    # hour by 1 around DST changes if exact EOD timing matters to you, or
+    # keep two schedule entries and let the no-op runs be harmless.
+    - cron: "55 6 * * *"
+  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run application tracker
+        env:
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python track_applications.py
+
+      - name: Commit updated CSV and state
+        run: |
+          git config user.name "application-tracker-bot"
+          git config user.email "actions@github.com"
+          git add applications.csv applications_by_company.md state/last_run.json
+          git diff --cached --quiet || git commit -m "Log applications for $(date -u +%Y-%m-%d)"
+          git push
