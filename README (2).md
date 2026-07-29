@@ -22,7 +22,9 @@ logs them to `applications.csv`, run daily by GitHub Actions.
    - `GMAIL_CLIENT_ID`
    - `GMAIL_CLIENT_SECRET`
    - `GMAIL_REFRESH_TOKEN`
-   - `ANTHROPIC_API_KEY`
+   - `GEMINI_API_KEY` (get one free at aistudio.google.com/apikey — no credit
+     card required; this uses the genuinely free Gemini tier, not a trial
+     credit that expires)
 
 4. Commit and push. The workflow runs automatically at ~23:55 PT daily, or
    trigger it manually from the Actions tab ("Run workflow") to test it.
@@ -31,14 +33,15 @@ logs them to `applications.csv`, run daily by GitHub Actions.
 
 - Searches Gmail for emails since the last run whose subject looks
   application-related (broad net).
-- Sends each candidate's subject/sender/full email body to Claude, which
-  decides if it's a real submission confirmation (filters out rejections,
-  interview invites, job-alert digests) and extracts `company`, `role`,
-  `job_id`, `skills_required`, `platform`.
+- Sends each candidate's subject/sender/full email body to an LLM (Google
+  Gemini `gemini-2.5-flash`, free tier), which decides if it's a real
+  submission confirmation (filters out rejections, interview invites,
+  job-alert digests) and extracts `company`, `role`, `job_id`,
+  `skills_required`, `platform`.
 - Appends new rows to `applications.csv`, dedupes by Gmail message ID via
   `state/last_run.json`.
 - Job ID and skills are only filled in when the email actually contains them
-  — Claude is instructed not to guess, so these are often blank.
+  — the model is instructed not to guess, so these are often blank.
 - After each run with new rows, `applications.csv` is re-sorted so entries
   are grouped by company (then by date), and `applications_by_company.md` is
   regenerated as a readable, grouped-by-company summary.

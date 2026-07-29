@@ -17,7 +17,7 @@ Environment variables required (set as GitHub Actions secrets):
 - GMAIL_CLIENT_SECRET
 - GMAIL_REFRESH_TOKEN        (reuse the same OAuth app you already use for
                                sending Gmail notifications in the job-application-agent)
-- ANTHROPIC_API_KEY
+- GEMINI_API_KEY
 
 Files this script reads/writes (relative to repo root):
 - applications.csv           the running log
@@ -35,7 +35,7 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-import anthropic
+import google.generativeai as genai
 
 # ---------------------------------------------------------------------------
 # Config
@@ -57,13 +57,13 @@ CSV_HEADERS = [
     "gmail_message_id",
 ]
 
-# Search is intentionally broad; Claude does the real filtering afterward.
+# Search is intentionally broad; the LLM does the real filtering afterward.
 GMAIL_QUERY_TERMS = (
     '(subject:"application" OR subject:"applied" OR subject:"thank you for applying" '
     'OR subject:"application received" OR subject:"your application")'
 )
 
-CLAUDE_MODEL = "claude-sonnet-4-6"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 EXTRACTION_PROMPT = """You are helping classify and extract data from an email that MIGHT be an \
 automated confirmation that a job application was submitted (e.g. from LinkedIn, Indeed, \
@@ -162,20 +162,21 @@ def fetch_message_summary(service, msg_id: str):
 
 
 # ---------------------------------------------------------------------------
-# Claude extraction
+# Gemini extraction
 # ---------------------------------------------------------------------------
 
-def extract_with_claude(client: "anthropic.Anthropic", email: dict) -> dict | None:
+def extract_with_llm(model: "genai.GenerativeModel", email: dict) -> dict | None:
     prompt = EXTRACTION_PROMPT.format(
         sender=email["sender"], subject=email["subject"], snippet=email["snippet"]
     )
-    response = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=300,
-        messages=[{"role": "user", "content": prompt}],
+    response = model.generate_content(
+        prompt,
+        generation_config=genai.types.GenerationConfig(
+            max_output_tokens=300,
+            response_mime_type="application/json",
+        ),
     )
-    text = response.content[0].text.strip()
-    text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    text = (response.text or "").strip()
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
@@ -267,7 +268,8 @@ def main():
     ensure_csv()
 
     gmail = get_gmail_service()
-    claude = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    llm = genai.GenerativeModel(GEMINI_MODEL)
 
     candidate_ids = search_candidate_messages(gmail, since)
     new_rows = 0
@@ -280,7 +282,7 @@ def main():
         if email["internal_date"] <= since:
             continue
 
-        extracted = extract_with_claude(claude, email)
+        extracted = extract_with_llm(llm, email)
         processed_ids.add(msg_id)  # mark as seen regardless, to avoid reprocessing
 
         if extracted is None:
