@@ -35,7 +35,8 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 
 # ---------------------------------------------------------------------------
 # Config
@@ -165,13 +166,14 @@ def fetch_message_summary(service, msg_id: str):
 # Gemini extraction
 # ---------------------------------------------------------------------------
 
-def extract_with_llm(model: "genai.GenerativeModel", email: dict) -> dict | None:
+def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
     prompt = EXTRACTION_PROMPT.format(
         sender=email["sender"], subject=email["subject"], snippet=email["snippet"]
     )
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=genai_types.GenerateContentConfig(
             max_output_tokens=300,
             response_mime_type="application/json",
         ),
@@ -268,8 +270,7 @@ def main():
     ensure_csv()
 
     gmail = get_gmail_service()
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    llm = genai.GenerativeModel(GEMINI_MODEL)
+    llm = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     candidate_ids = search_candidate_messages(gmail, since)
     new_rows = 0
