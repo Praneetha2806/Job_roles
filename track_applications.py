@@ -179,12 +179,19 @@ def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
         ),
     )
     text = (response.text or "").strip()
+    print(f"  [debug] subject={email['subject']!r}")
+    print(f"  [debug] gemini raw response: {text!r}")
+
     try:
         data = json.loads(text)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print(f"  [debug] JSON parse failed: {e}")
         return None
+
     if not data.get("is_application_confirmation"):
+        print(f"  [debug] Gemini classified this as NOT an application confirmation")
         return None
+
     return data
 
 
@@ -274,13 +281,19 @@ def main():
 
     candidate_ids = search_candidate_messages(gmail, since)
     new_rows = 0
+    print(f"[debug] since={since.isoformat()}")
 
     for msg_id in candidate_ids:
         if msg_id in processed_ids:
+            print(f"[debug] {msg_id}: skipped, already in processed_ids")
             continue
 
         email = fetch_message_summary(gmail, msg_id)
         if email["internal_date"] <= since:
+            print(
+                f"[debug] {msg_id}: skipped, internal_date={email['internal_date'].isoformat()} "
+                f"<= since={since.isoformat()}"
+            )
             continue
 
         extracted = extract_with_llm(llm, email)
