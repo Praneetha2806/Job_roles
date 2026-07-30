@@ -64,7 +64,7 @@ GMAIL_QUERY_TERMS = (
     'OR subject:"application received" OR subject:"your application")'
 )
 
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-flash-latest"
 
 EXTRACTION_PROMPT = """You are helping classify and extract data from an email that MIGHT be an \
 automated confirmation that a job application was submitted (e.g. from LinkedIn, Indeed, \
