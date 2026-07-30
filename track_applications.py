@@ -59,12 +59,26 @@ CSV_HEADERS = [
 ]
 
 # Search is intentionally broad; the LLM does the real filtering afterward.
+# Bare terms (no "subject:" prefix) match anywhere in the email, including the
+# body -- important since many confirmation emails open with "Thank you for
+# applying" in the body text rather than the subject line.
 GMAIL_QUERY_TERMS = (
-    '(subject:"application" OR subject:"applied" OR subject:"thank you for applying" '
-    'OR subject:"application received" OR subject:"your application")'
+    '(subject:"application" OR subject:"applied" OR subject:"application received" '
+    'OR subject:"your application" OR "thank you for applying")'
 )
 
 GEMINI_MODEL = "gemini-flash-latest"
+
+# Phrases that strongly indicate a genuine application-submission confirmation.
+# Most ATS confirmation emails (Greenhouse, Lever, Workday, company careers
+# pages, etc.) open with one of these almost verbatim.
+CONFIRMATION_PHRASES = [
+    "thank you for applying",
+    "thanks for applying",
+    "your application has been received",
+    "we have received your application",
+    "we've received your application",
+]
 
 EXTRACTION_PROMPT = """You are helping classify and extract data from an email that MIGHT be an \
 automated confirmation that a job application was submitted (e.g. from LinkedIn, Indeed, \
@@ -77,6 +91,14 @@ Snippet: {snippet}
 
 Decide if this is genuinely an application-submission confirmation (NOT a rejection, \
 NOT an interview invite, NOT a newsletter, NOT a job recommendation digest).
+
+Strong signal: emails that open with phrasing like "Thank you for applying", \
+"Thanks for applying", or "We have received your application" are almost always \
+genuine submission confirmations, even if the rest of the email is short or generic. \
+Treat that opening phrasing as strong evidence of is_application_confirmation=true, \
+unless the email clearly contradicts it (e.g. it's actually a rejection that happens \
+to reference a past application, or a promotional/job-alert email using similar wording \
+without confirming a specific submission).
 
 Some confirmation emails include a requisition/job ID (e.g. "Job ID: 12345", \
 "Req #R-00123") and/or a list of required skills or qualifications pulled from the \
@@ -166,6 +188,15 @@ def fetch_message_summary(service, msg_id: str):
 # Gemini extraction
 # ---------------------------------------------------------------------------
 
+def contains_confirmation_phrase(email: dict) -> bool:
+    """Quick code-level check for known confirmation phrasing, used only for
+    debug visibility / as a signal -- the actual accept/reject decision still
+    comes from the LLM, which also checks for contradicting context (e.g. a
+    rejection email that happens to reference "your application")."""
+    haystack = f"{email['subject']} {email['snippet']}".lower()
+    return any(phrase in haystack for phrase in CONFIRMATION_PHRASES)
+
+
 def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
     prompt = EXTRACTION_PROMPT.format(
         sender=email["sender"], subject=email["subject"], snippet=email["snippet"]
@@ -180,6 +211,7 @@ def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
     )
     text = (response.text or "").strip()
     print(f"  [debug] subject={email['subject']!r}")
+    print(f"  [debug] phrase_match={contains_confirmation_phrase(email)}")
     print(f"  [debug] gemini raw response: {text!r}")
 
     try:
