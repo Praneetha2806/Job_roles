@@ -40,6 +40,9 @@ jobs:
         run: |
           git config user.name "application-tracker-bot"
           git config user.email "actions@github.com"
-          git add applications.csv applications_by_company.md state/last_run.json
+          git add applications.csv state/last_run.json
+          if [ -f applications_by_company.md ]; then
+            git add applications_by_company.md
+          fi
           git diff --cached --quiet || git commit -m "Log applications for $(date -u +%Y-%m-%d)"
           git push
