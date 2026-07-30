@@ -174,8 +174,9 @@ def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
         model=GEMINI_MODEL,
         contents=prompt,
         config=genai_types.GenerateContentConfig(
-            max_output_tokens=300,
+            max_output_tokens=1000,
             response_mime_type="application/json",
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
         ),
     )
     text = (response.text or "").strip()
