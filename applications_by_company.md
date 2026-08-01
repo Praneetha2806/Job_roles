@@ -16,9 +16,11 @@
 - **Data Analyst Intern**
   - Applied: 2026-07-30 via Ashby — Status: Applied
 
-## TransUnion (1)
+## TransUnion (2)
 - **Marketing Data Analyst**
   - Applied: 2026-07-30 via Workday — Status: Applied
+- **Marketing Data Analyst**
+  - Applied: 2026-08-01 via Workday — Status: Applied
 
 ## Visionairy (1)
 - **Unknown role**
