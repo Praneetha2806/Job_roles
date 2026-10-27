@@ -8,7 +8,9 @@ needs no server.
 Each run:
 
 - updates `applications.csv` and `applications_by_company.md` in this repo,
-- emails you a summary on days with updates (optional), and
+- emails you a summary on days with updates, and a separate "Action
+  needed" reminder for each application that moves to a next round
+  (optional), and
 - refreshes the dashboard at
   **https://praneetha2806.github.io/Job_roles/** (once GitHub Pages is on).
 
@@ -60,8 +62,22 @@ Each run:
 4. **Save and commit.** Progress is saved after every email. The workflow
    commits the CSV, summary and state back to the repo, even if a run fails
    partway, so finished work is never lost.
-5. **Email the summary** (optional, only on days with updates): new
-   applications, next rounds with their links, rejections, and overall totals.
+5. **Email you** (optional, only on days with updates):
+   - a summary of new applications, next rounds with their links,
+     rejections, and overall totals, and
+   - a separate **"Action needed: next round at <company>"** reminder for each
+     application that moved to a next round, with what to do, the link, and
+     the dates.
+
+### When a company replies to an earlier application
+
+Nothing to do on your side. The next nightly run finds the reply, Gemini
+reads it, and the tracker finds that application's existing row in
+`applications.csv` (same company, preferring the same role) and changes its
+status, instead of adding a new row. The run commits the updated CSV, and
+the dashboard shows the change the next time it is opened, after GitHub Pages
+redeploys (a minute or two). Replies are picked up at the nightly run, or
+sooner if you run the workflow by hand.
 
 To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES` and
 `NEXT_STEP_PHRASES` near the top of `track_applications.py`.
@@ -145,8 +161,8 @@ needs no credit card.
 2. Create an **App Password** named `Job Tracker` at
    https://myaccount.google.com/apppasswords and copy the 16 characters.
 
-The summary is sent from the tracked Gmail account. Leave these secrets out
-to turn it off.
+The summary and next-round reminders are sent from the tracked Gmail account
+to `NOTIFY_EMAIL`. Leave these secrets out to turn both off.
 
 ### 5. Repo secrets
 
@@ -158,8 +174,8 @@ Settings → Secrets and variables → Actions → **New repository secret**:
 | `GMAIL_CLIENT_SECRET` | Client secret from step 1 | Yes |
 | `GMAIL_REFRESH_TOKEN` | Token from step 2 | Yes |
 | `GEMINI_API_KEY` | Key from step 3 | Yes |
-| `GMAIL_APP_PASSWORD` | App Password from step 4 | For the email summary |
-| `NOTIFY_EMAIL` | Address that should receive the summary | For the email summary |
+| `GMAIL_APP_PASSWORD` | App Password from step 4 | For emails |
+| `NOTIFY_EMAIL` | Address that should receive the summary and reminders | For emails |
 
 ### 6. Run it
 
@@ -188,7 +204,7 @@ Applications → Run workflow**.
 | "Access blocked: … has not completed the Google verification process" (`access_denied`) | The app is still in *Testing*. Publish it (Setup 1.4). If **Publish app** is greyed out, fill in the home page and privacy policy links on the Branding page first (Setup 1.3). |
 | "The setting you are looking for is not available" on the App passwords page | 2-Step Verification is off, or uses only a passkey or security key. Add a phone number as a second step (Setup 4.1). |
 | Warning "Gemini unavailable" on a run | Gemini was busy or the daily limit was reached. Nothing is lost; the next run retries those emails. |
-| Warning "Email not sent" | Check the `GMAIL_APP_PASSWORD` and `NOTIFY_EMAIL` secrets. A new App Password is needed if 2-Step Verification was turned off and on again. |
+| Warning "Email not sent" or "Reminder not sent" | Check the `GMAIL_APP_PASSWORD` and `NOTIFY_EMAIL` secrets. A new App Password is needed if 2-Step Verification was turned off and on again. |
 | Workflow shows "disabled" | GitHub turns off scheduled workflows after 60 days without repo activity. **Actions → Track Job Applications → Enable workflow**. |
 | Dashboard shows "Couldn't load your applications" | GitHub Pages is off or still deploying. Check Settings → Pages, wait a minute, and refresh. |
 
