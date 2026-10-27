@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Application Tracker</title>
+<!--
+  Dashboard for applications.csv, published with GitHub Pages.
+  It reads applications.csv from this repo on every load, so it
+  updates whenever the Track Job Applications workflow commits new data.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Public+Sans:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  /* Layout: one column of cards; tiles and the two lists wrap to columns when there is room. */
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --fg: #1d2330; --muted: #5d6677; --line: #dfe3ea;
+    --accent: #2f5fd0; --ok: #1f7a4d; --bad: #b4342b; --grid: #eceff4;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1a1f28; --fg: #e7eaf0; --muted: #9aa3b4; --line: #2c3340;
+      --accent: #7aa2ff; --ok: #5ccf94; --bad: #ff7b70; --grid: #232a35; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --panel: #1a1f28; --fg: #e7eaf0; --muted: #9aa3b4; --line: #2c3340;
+    --accent: #7aa2ff; --ok: #5ccf94; --bad: #ff7b70; --grid: #232a35; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+  .page { max-width: 1200px; margin-inline: auto; padding-block: 32px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 24px; }
+  h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.15; margin: 0; text-wrap: balance; }
+  h2 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+  .lede { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
+  .lede b { color: var(--fg); font-weight: 600; }
+  .asof { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: 12px; }
+  .tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+  .tile { padding: 14px 18px; display: grid; gap: 2px; }
+  .tile-label, .tile-note, .note { font-size: .8rem; color: var(--muted); }
+  .tile-value { font-family: var(--font-display); font-size: 2rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  .card { padding: 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+  .note { margin: 0; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: 12px; }
+  .matrix { position: relative; min-height: 120px; }
+  .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgb(0 0 0 / .15); padding: 6px 10px; font-size: .8rem; white-space: nowrap; z-index: 2; }
+  .tip .d { color: var(--muted); }
+  input[type=search] { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); width: 100%; max-width: 20rem; }
+  .scroll { max-height: 26rem; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: left; font-size: .78rem; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); padding: 6px 8px; white-space: nowrap; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .num { text-align: right; }
+  .zero { color: var(--muted); }
+  th button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  th button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  th[aria-sort=ascending] button::after { content: " ↑"; }
+  th[aria-sort=descending] button::after { content: " ↓"; }
+  a { color: var(--accent); }
+  .error { color: var(--bad); }
+  @media (max-width: 40rem) { .opt { display: none; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <h1>Job Application Tracker</h1>
+    <p class="lede" id="lede">Loading your applications…</p>
+    <p class="asof" id="asof"></p>
+  </header>
+
+  <section class="tiles" aria-label="Totals">
+    <div class="tile"><span class="tile-label">Applications</span><span class="tile-value" id="t-total">—</span><span class="tile-note">All tracked so far</span></div>
+    <div class="tile"><span class="tile-label">Waiting to hear</span><span class="tile-value" id="t-waiting">—</span><span class="tile-note">Status still Applied</span></div>
+    <div class="tile"><span class="tile-label">Next round</span><span class="tile-value ok" id="t-next">—</span><span class="tile-note">Assessments, surveys, interviews</span></div>
+    <div class="tile"><span class="tile-label">Rejections</span><span class="tile-value bad" id="t-rejected">—</span><span class="tile-note">Total so far</span></div>
+    <div class="tile"><span class="tile-label">Response rate</span><span class="tile-value" id="t-response">—</span><span class="tile-note">Rejected or next round, of all</span></div>
+  </section>
+
+  <section class="card" id="per-day">
+    <h2>Applications per day</h2>
+    <p class="note">Each square is one day and shows how many applications you sent. Rows are weekdays, columns are weeks starting Monday, and the bottom row is the week's total. Up to the last 12 weeks.</p>
+    <div class="matrix" id="matrix"></div>
+  </section>
+
+  <section class="card" id="companies">
+    <h2>Applications by company</h2>
+    <p class="note">Every company you applied to, with where each application stands. Click a column to sort.</p>
+    <input id="company-search" type="search" placeholder="Search companies" aria-label="Search companies">
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th data-sort="company"><button type="button">Company</button></th>
+          <th class="num" data-sort="applications" aria-sort="descending"><button type="button">Applications</button></th>
+          <th class="num opt" data-sort="waiting"><button type="button">Waiting</button></th>
+          <th class="num" data-sort="next_round"><button type="button">Next round</button></th>
+          <th class="num" data-sort="rejected"><button type="button">Rejected</button></th>
+          <th class="opt" data-sort="last_applied"><button type="button">Last applied</button></th>
+        </tr></thead>
+        <tbody id="companies-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="pair">
+    <section class="card" id="rejections">
+      <h2>Rejections so far</h2>
+      <p class="note" id="avg-days">Newest first.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Application</th><th class="opt">Applied</th><th>Rejected</th><th class="num">Days</th></tr></thead>
+          <tbody id="rejections-body"></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card" id="next-rounds">
+      <h2>Next rounds</h2>
+      <p class="note">What each company asked you to do next, with the link from the email.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Application</th><th>Next step</th><th class="opt">Received</th></tr></thead>
+          <tbody id="next-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+const fmt = d3.format(',');
+const parseDay = (s) => new Date(s + 'T00:00:00Z');
+const dayLabel = (s) => d3.utcFormat('%b %-d')(parseDay(s));
+const iso = d3.utcFormat('%Y-%m-%d');
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MAX_WEEKS = 12;
+const $ = (id) => document.getElementById(id);
+const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+
+const clean = (r) => ({
+  company: (r.company || '').trim() || 'Unknown company',
+  role: (r.role || '').trim(),
+  date_applied: (r.date_applied || '').slice(0, 10),
+  status: r.status || 'Applied',
+  status_updated: (r.status_updated || '').slice(0, 10),
+  next_step: (r.next_step_details || '').trim(),
+});
+const label = (r) => (r.role ? `${r.company} — ${r.role}` : r.company);
+
+function cell(text, cls) {
+  const td = document.createElement('td');
+  if (cls) td.className = cls;
+  td.textContent = text;
+  return td;
+}
+
+function drawSummary(rows, daily) {
+  const count = (s) => rows.filter((r) => r.status === s).length;
+  const total = rows.length, rejected = count('Rejected'), next = count('Next Round');
+  const companies = new Set(rows.map((r) => r.company.toLowerCase())).size;
+  $('t-total').textContent = fmt(total);
+  $('t-waiting').textContent = fmt(count('Applied'));
+  $('t-next').textContent = fmt(next);
+  $('t-rejected').textContent = fmt(rejected);
+  $('t-response').textContent = total ? `${Math.round(100 * (rejected + next) / total)}%` : '—';
+
+  const lede = $('lede');
+  lede.replaceChildren();
+  const add = (text, bold) => lede.append(bold ? Object.assign(document.createElement('b'), {textContent: text}) : document.createTextNode(text));
+  add('You have applied for '); add(fmt(total), true); add(' roles at '); add(fmt(companies), true);
+  add(' companies. '); add(fmt(rejected), true); add(' have said no so far and '); add(fmt(next), true);
+  add(' have moved you to a next round.');
+  if (daily.length) {
+    const busiest = daily.reduce((a, b) => (b.n > a.n ? b : a));
+    add(' Your busiest day was '); add(dayLabel(busiest.day), true); add(' with '); add(fmt(busiest.n), true); add(' applications.');
+  }
+}
+
+function drawMatrix(daily) {
+  const el = $('matrix');
+  el.replaceChildren();
+  if (!daily.length) { el.textContent = 'No applications yet.'; return; }
+  const counts = new Map(daily.map((d) => [d.day, d.n]));
+  const lastWeek = d3.utcMonday.floor(parseDay(daily[daily.length - 1].day));
+  const windowStart = d3.utcMonday.offset(lastWeek, -(MAX_WEEKS - 1));
+  // Start at the first week that has data inside the window.
+  const first = daily.map((d) => parseDay(d.day)).find((d) => d >= windowStart) || lastWeek;
+  const weeks = d3.utcMonday.range(d3.utcMonday.floor(first), d3.utcMonday.offset(lastWeek, 1));
+
+  const labelW = 44, gap = 4, headH = 22;
+  const cellSize = Math.max(22, Math.min(52, Math.floor(((el.clientWidth || 600) - labelW) / weeks.length) - gap));
+  const svgW = labelW + weeks.length * (cellSize + gap);
+  const svgH = headH + 8 * (cellSize + gap);
+  const max = d3.max(daily, (d) => d.n) || 1;
+  const op = d3.scaleLinear([1, max], [0.18, 1]).clamp(true);
+  const small = cellSize < 30 ? '10px' : '12px';
+
+  const svg = d3.select(el).append('svg')
+    .attr('width', '100%').attr('viewBox', `0 0 ${svgW} ${svgH}`)
+    .attr('role', 'img').attr('aria-label', 'Applications per day by weekday and week')
+    .style('max-width', `${svgW}px`).style('display', 'block');
+
+  svg.append('g').selectAll('text').data([...DAYS, 'Week']).join('text')
+    .attr('x', 0).attr('y', (d, i) => headH + i * (cellSize + gap) + cellSize / 2)
+    .attr('dominant-baseline', 'middle').attr('fill', 'var(--muted)').style('font-size', '12px')
+    .text((d) => d);
+  const every = cellSize < 40 ? 2 : 1;
+  svg.append('g').selectAll('text').data(weeks).join('text')
+    .attr('x', (d, i) => labelW + i * (cellSize + gap) + cellSize / 2).attr('y', 12)
+    .attr('text-anchor', 'middle').attr('fill', 'var(--muted)').style('font-size', '12px')
+    .text((d, i) => (i % every ? '' : d3.utcFormat('%b %-d')(d)));
+
+  const tip = d3.select(el).append('div').attr('class', 'tip').attr('hidden', '');
+  const show = (event, title, n) => {
+    tip.attr('hidden', null).html('');
+    tip.append('div').attr('class', 'd').text(title);
+    tip.append('div').text(`${fmt(n)} application${n === 1 ? '' : 's'}`);
+    const [x, y] = d3.pointer(event, el);
+    const tw = tip.node().offsetWidth;
+    tip.style('left', `${Math.max(0, Math.min(x + 12, el.clientWidth - tw))}px`).style('top', `${y + 12}px`);
+  };
+  const hide = () => tip.attr('hidden', '');
+
+  const today = iso(new Date());
+  const days = [];
+  weeks.forEach((w, wi) => DAYS.forEach((_, di) => {
+    const date = d3.utcDay.offset(w, di);
+    if (iso(date) <= today) days.push({date, wi, di, n: counts.get(iso(date)) || 0});
+  }));
+  const g = svg.append('g').selectAll('g').data(days).join('g')
+    .attr('transform', (d) => `translate(${labelW + d.wi * (cellSize + gap)},${headH + d.di * (cellSize + gap)})`)
+    .on('pointermove', (e, d) => show(e, d3.utcFormat('%a, %b %-d')(d.date), d.n)).on('pointerleave', hide);
+  g.append('rect').attr('width', cellSize).attr('height', cellSize).attr('rx', 4)
+    .attr('fill', (d) => (d.n ? 'var(--accent)' : 'var(--grid)')).attr('fill-opacity', (d) => (d.n ? op(d.n) : 1));
+  g.append('text').attr('x', cellSize / 2).attr('y', cellSize / 2)
+    .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
+    .attr('fill', (d) => (d.n && op(d.n) > 0.55 ? 'var(--panel)' : 'var(--fg)'))
+    .style('font-size', small).style('font-variant-numeric', 'tabular-nums')
+    .text((d) => (d.n ? d.n : ''));
+
+  const totals = weeks.map((w, wi) => ({w, wi, n: d3.sum(DAYS, (_, di) => counts.get(iso(d3.utcDay.offset(w, di))) || 0)}));
+  const tg = svg.append('g').selectAll('g').data(totals).join('g')
+    .attr('transform', (d) => `translate(${labelW + d.wi * (cellSize + gap)},${headH + 7 * (cellSize + gap)})`)
+    .on('pointermove', (e, d) => show(e, `Week of ${d3.utcFormat('%b %-d')(d.w)}`, d.n)).on('pointerleave', hide);
+  tg.append('rect').attr('x', .5).attr('y', .5).attr('width', cellSize - 1).attr('height', cellSize - 1).attr('rx', 4)
+    .attr('fill', 'none').attr('stroke', 'var(--line)');
+  tg.append('text').attr('x', cellSize / 2).attr('y', cellSize / 2)
+    .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
+    .attr('fill', 'var(--fg)').style('font-weight', 600).style('font-size', small)
+    .style('font-variant-numeric', 'tabular-nums').text((d) => fmt(d.n));
+}
+
+const sortState = {key: 'applications', dir: 'descending', q: ''};
+const numeric = new Set(['applications', 'waiting', 'next_round', 'rejected']);
+let companyRows = [];
+
+function drawCompanies() {
+  const tbody = $('companies-body');
+  tbody.replaceChildren();
+  const {key, dir, q} = sortState;
+  const cmp = numeric.has(key) ? (a, b) => a[key] - b[key] : (a, b) => String(a[key]).localeCompare(String(b[key]));
+  companyRows.filter((r) => !q || r.company.toLowerCase().includes(q))
+    .sort((a, b) => (dir === 'ascending' ? 1 : -1) * cmp(a, b) || a.company.localeCompare(b.company))
+    .forEach((r) => {
+      const tr = document.createElement('tr');
+      tr.append(
+        cell(r.company),
+        cell(fmt(r.applications), 'num'),
+        cell(fmt(r.waiting), 'num opt' + (r.waiting ? '' : ' zero')),
+        cell(fmt(r.next_round), 'num' + (r.next_round ? ' ok' : ' zero')),
+        cell(fmt(r.rejected), 'num' + (r.rejected ? ' bad' : ' zero')),
+        cell(r.last_applied ? dayLabel(r.last_applied) : '', 'opt'),
+      );
+      tbody.append(tr);
+    });
+}
+
+document.querySelectorAll('#companies th[data-sort] button').forEach((btn) => btn.addEventListener('click', () => {
+  const key = btn.closest('th').dataset.sort;
+  sortState.dir = sortState.key === key && sortState.dir === 'descending' ? 'ascending'
+    : (numeric.has(key) || key === 'last_applied' ? 'descending' : 'ascending');
+  sortState.key = key;
+  document.querySelectorAll('#companies th[data-sort]').forEach((th) => {
+    if (th.dataset.sort === key) th.setAttribute('aria-sort', sortState.dir); else th.removeAttribute('aria-sort');
+  });
+  drawCompanies();
+}));
+$('company-search').addEventListener('input', (e) => { sortState.q = e.target.value.trim().toLowerCase(); drawCompanies(); });
+
+// Show the next step as text, turning its first web address into a link.
+function stepCell(text) {
+  const td = document.createElement('td');
+  const m = text.match(/https?:\/\/[^\s)>\]]+/);
+  if (!m) { td.textContent = text; return td; }
+  const before = text.slice(0, m.index).replace(/[\s:]+$/, '');
+  if (before) td.append(document.createTextNode(before + ' '));
+  const a = Object.assign(document.createElement('a'), {href: m[0], target: '_blank', rel: 'noopener noreferrer', textContent: 'Open link'});
+  td.append(a);
+  return td;
+}
+
+function drawLists(rows) {
+  const rejected = rows.filter((r) => r.status === 'Rejected')
+    .sort((a, b) => d3.descending(a.status_updated, b.status_updated));
+  const rb = $('rejections-body');
+  rb.replaceChildren();
+  const waits = [];
+  rejected.forEach((r) => {
+    const days = r.status_updated && r.date_applied ? daysBetween(r.date_applied, r.status_updated) : null;
+    if (days != null) waits.push(days);
+    const tr = document.createElement('tr');
+    tr.append(cell(label(r)), cell(r.date_applied ? dayLabel(r.date_applied) : '', 'opt'),
+      cell(r.status_updated ? dayLabel(r.status_updated) : ''), cell(days == null ? '' : fmt(days), 'num'));
+    rb.append(tr);
+  });
+  $('avg-days').textContent = waits.length
+    ? `Newest first. On average a rejection came ${d3.format('.1f')(d3.mean(waits))} days after you applied.`
+    : 'Newest first.';
+
+  const nb = $('next-body');
+  nb.replaceChildren();
+  rows.filter((r) => r.status === 'Next Round')
+    .sort((a, b) => d3.descending(a.status_updated, b.status_updated))
+    .forEach((r) => {
+      const tr = document.createElement('tr');
+      tr.append(cell(label(r)), stepCell(r.next_step), cell(r.status_updated ? dayLabel(r.status_updated) : '', 'opt'));
+      nb.append(tr);
+    });
+}
+
+async function load() {
+  // no-store: always read the latest commit's data, not a cached copy.
+  const res = await fetch('applications.csv', {cache: 'no-store'});
+  if (!res.ok) throw new Error(`applications.csv: HTTP ${res.status}`);
+  const rows = d3.csvParse(await res.text()).map(clean);
+  const daily = d3.rollups(rows.filter((r) => r.date_applied), (v) => v.length, (r) => r.date_applied)
+    .map(([day, n]) => ({day, n})).sort((a, b) => d3.ascending(a.day, b.day));
+  // Group case-insensitively ("Acme" and "ACME" are one company), showing the
+  // most common spelling.
+  companyRows = d3.rollups(rows, (v) => ({
+    company: d3.greatest(d3.rollups(v, (x) => x.length, (r) => r.company), (x) => x[1])[0],
+    applications: v.length,
+    waiting: v.filter((r) => r.status === 'Applied').length,
+    next_round: v.filter((r) => r.status === 'Next Round').length,
+    rejected: v.filter((r) => r.status === 'Rejected').length,
+    last_applied: d3.max(v, (r) => r.date_applied) || '',
+  }), (r) => r.company.toLowerCase()).map(([, s]) => s);
+
+  drawSummary(rows, daily);
+  drawMatrix(daily);
+  drawCompanies();
+  drawLists(rows);
+  const latest = d3.max(rows, (r) => d3.max([r.date_applied, r.status_updated]));
+  if (latest) $('asof').textContent = `Latest email recorded: ${d3.utcFormat('%b %-d, %Y')(parseDay(latest))}. Updated by the nightly tracker run.`;
+  let resizeTimer;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => drawMatrix(daily), 150); });
+
+}
+
+load().catch((err) => {
+  $('lede').textContent = `Couldn't load your applications (${err.message}). Refresh the page to try again.`;
+  $('lede').classList.add('error');
+});
+</script>
+</body>
+</html>

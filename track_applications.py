@@ -13,7 +13,8 @@ What it does:
    next-round emails update the status of the matching existing row (or add
    a new row if the original application was never logged).
 4. Updates the "last run" timestamp and the set of processed Gmail message IDs.
-5. On days with updates, emails a summary to NOTIFY_EMAIL (optional).
+5. On days with updates, emails a summary to NOTIFY_EMAIL (optional), plus a
+   separate reminder for each application that moved to a next round.
 
 Environment variables required (set as GitHub Actions secrets):
 - GMAIL_CLIENT_ID
@@ -21,6 +22,9 @@ Environment variables required (set as GitHub Actions secrets):
 - GMAIL_REFRESH_TOKEN        (reuse the same OAuth app you already use for
                                sending Gmail notifications in the job-application-agent)
 - GEMINI_API_KEY
+- START_DATE (optional)        YYYY-MM-DD; scan emails from this date instead
+                               of the last run (set from the Run workflow form)
+- RESET_DATA (optional)        "RESET" clears all tracked applications first
 - GMAIL_APP_PASSWORD, NOTIFY_EMAIL (optional) -- send the daily summary from
                                the tracked mailbox to NOTIFY_EMAIL
 
@@ -38,7 +42,7 @@ import smtplib
 import sys
 import time
 from email.message import EmailMessage
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from google.oauth2.credentials import Credentials
@@ -557,25 +561,65 @@ def build_summary_email(updates: list[dict], rows: list[dict]) -> tuple[str, str
         for status, heading in STATUS_HEADINGS
     )
     lines.append(f"All applications: {totals}")
-    repo = os.environ.get("GITHUB_REPOSITORY")
-    if repo:
-        server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
-        lines.append(f"Full list: {server}/{repo}/blob/HEAD/applications_by_company.md")
+    url = dashboard_url()
+    if url:
+        lines.append(f"Dashboard: {url}")
 
     subject = f"Job tracker: {len(updates)} update(s) - {today}"
     return subject, "\n".join(lines)
 
 
-def send_summary_email(sender: str, updates: list[dict], rows: list[dict]):
-    """Email the summary via Gmail SMTP using an app password. Skipped quietly
-    if not configured; a send failure is reported but doesn't fail the run."""
+def dashboard_url() -> str | None:
+    """The GitHub Pages address of index.html for this repo, when run in Actions."""
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    if not repo or "/" not in repo:
+        return None
+    owner, name = repo.split("/", 1)
+    return f"https://{owner.lower()}.github.io/{name}/"
+
+
+def _pretty_date(day: str) -> str:
+    try:
+        return datetime.strptime(day, "%Y-%m-%d").strftime("%b %d, %Y").replace(" 0", " ")
+    except ValueError:
+        return day or "unknown"
+
+
+def build_reminder_email(row: dict) -> tuple[str, str]:
+    """Return (subject, body) for one application that moved to a next round."""
+    what = row["role"] or "an application"
+    company = row["company"] or "a company"
+    lines = [
+        f"{company} has moved your application for {what} to the next round.",
+        "",
+        f"What to do: {row['next_step_details'] or 'See the email from ' + company + ' for details.'}",
+    ]
+    link = re.search(r"https?://[^\s)>\]]+", row["next_step_details"] or "")
+    if link:
+        lines.append(f"Link: {link.group(0)}")
+    lines += [
+        "",
+        f"Received: {_pretty_date(row['status_updated'])}",
+        f"Applied: {_pretty_date(row['date_applied'])}" + (f" via {row['platform']}" if row["platform"] else ""),
+        "",
+        "Assessments and surveys often expire within a few days, so check the "
+        "original email for a deadline.",
+    ]
+    url = dashboard_url()
+    if url:
+        lines += ["", f"All your applications: {url}"]
+    return f"Action needed: next round at {company}" + (f" - {row['role']}" if row["role"] else ""), "\n".join(lines)
+
+
+def send_email(sender: str, subject: str, body: str) -> str | None:
+    """Send one email via Gmail SMTP using an app password. Returns None on
+    success, otherwise why it wasn't sent. Never raises, so email problems
+    don't fail the run."""
     password = os.environ.get("GMAIL_APP_PASSWORD")
     recipient = os.environ.get("NOTIFY_EMAIL")
     if not (password and recipient):
-        print("[debug] email summary not configured (GMAIL_APP_PASSWORD / NOTIFY_EMAIL)")
-        return
+        return "not configured (GMAIL_APP_PASSWORD / NOTIFY_EMAIL)"
 
-    subject, body = build_summary_email(updates, rows)
     msg = EmailMessage()
     msg["From"] = sender
     msg["To"] = recipient
@@ -587,25 +631,69 @@ def send_summary_email(sender: str, updates: list[dict], rows: list[dict]):
             smtp.login(sender, password.replace(" ", ""))
             smtp.send_message(msg)
     except (smtplib.SMTPException, OSError) as e:
-        gh_annotation("warning", "Email not sent", f"Could not send summary to {recipient}: {e}")
+        return str(e)
+    return None
+
+
+def send_notifications(sender: str, updates: list[dict], rows: list[dict]):
+    """The daily summary, plus one reminder per application that moved to a
+    next round in this run."""
+    if not os.environ.get("GMAIL_APP_PASSWORD") or not os.environ.get("NOTIFY_EMAIL"):
+        print("[debug] email not configured (GMAIL_APP_PASSWORD / NOTIFY_EMAIL)")
         return
-    gh_annotation("notice", "Email sent", f"Summary of {len(updates)} update(s) sent to {recipient}")
+
+    error = send_email(sender, *build_summary_email(updates, rows))
+    if error:
+        gh_annotation("warning", "Email not sent", f"Could not send the summary: {error}")
+    else:
+        gh_annotation("notice", "Email sent", f"Summary of {len(updates)} update(s) sent")
+
+    reminders = [r for r in updates if r["status"] == STATUS_NEXT_ROUND]
+    failed = []
+    for row in reminders:
+        error = send_email(sender, *build_reminder_email(row))
+        if error:
+            failed.append(f"{row['company']}: {error}")
+    if reminders:
+        sent = len(reminders) - len(failed)
+        gh_annotation("notice", "Next-round reminders", f"Sent {sent} of {len(reminders)} reminder(s)")
+    if failed:
+        gh_annotation("warning", "Reminder not sent", "; ".join(failed))
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
+def parse_start_date(value: str) -> datetime:
+    try:
+        return datetime.strptime(value.strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        sys.exit(f"ERROR: start date {value!r} is not a date like 2026-10-01 (YYYY-MM-DD).")
+
+
 def main():
     check_env()
+    start_date = os.environ.get("START_DATE", "").strip()
+    since_override = parse_start_date(start_date) if start_date else None
+
+    if os.environ.get("RESET_DATA", "").strip().upper() == "RESET":
+        # Fresh start, e.g. after copying this repo as a template.
+        save_rows([])
+        save_state({"last_run_utc": None, "processed_ids": []})
+        gh_annotation("notice", "Reset", "Cleared all tracked applications; starting fresh.")
+
     state = load_state()
     processed_ids = set(state.get("processed_ids", []))
 
-    if state.get("last_run_utc"):
+    if since_override:
+        # Already-processed emails are still skipped, so this never double-counts.
+        since = since_override
+    elif state.get("last_run_utc"):
         since = datetime.fromisoformat(state["last_run_utc"])
     else:
-        # first run: look back 1 day
-        since = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        # First run with no start date: look back 7 days.
+        since = (datetime.now(timezone.utc) - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     gmail = get_gmail_service()
     mailbox = gmail.users().getProfile(userId="me").execute()["emailAddress"]
@@ -681,7 +769,7 @@ def main():
     persist()
 
     if updates:
-        send_summary_email(mailbox, updates, rows)
+        send_notifications(mailbox, updates, rows)
 
     gh_annotation(
         "notice",
