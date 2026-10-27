@@ -39,6 +39,7 @@ from google.oauth2.credentials import Credentials
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from google import genai
 from google.genai import errors as genai_errors
@@ -111,19 +112,23 @@ JOB_CONTEXT_TERMS = [
 
 
 def _gmail_or(terms: list[str]) -> str:
+    # Gmail matches phrases anywhere, so drop a phrase that already contains a
+    # shorter one in the list ("thank you for applying" is covered by "thank you").
+    # Fewer terms keeps each search under Gmail's per-minute query-cost quota.
+    terms = [t for t in terms if not any(o != t and o in t for o in terms)]
     return "(" + " OR ".join(f'"{t}"' for t in terms) + ")"
 
 
-# Either an application-ish subject line, or a keyword plus job context anywhere
-# in the email. Bare terms (no "subject:" prefix) also match the body. The LLM
-# does the precise classification afterward.
-GMAIL_QUERY_TERMS = (
-    '(subject:"application" OR subject:"applied" OR subject:"your application" OR ('
-    + _gmail_or(CONFIRMATION_PHRASES + REJECTION_PHRASES + NEXT_STEP_PHRASES)
-    + " "
-    + _gmail_or(JOB_CONTEXT_TERMS)
-    + "))"
-)
+# Gmail rejects one big search with every keyword ("Quota exceeded for quota
+# metric 'Total Query Cost'"), so run a small search per group and merge the
+# results. Bare terms (no "subject:" prefix) also match the body; each keyword
+# must appear with a job word. The LLM does the precise classification afterward.
+GMAIL_QUERIES = [
+    '(subject:"application" OR subject:"applied")',
+] + [
+    f"{_gmail_or(phrases)} {_gmail_or(JOB_CONTEXT_TERMS)}"
+    for phrases in (CONFIRMATION_PHRASES, REJECTION_PHRASES, NEXT_STEP_PHRASES)
+]
 
 GEMINI_MODEL = "gemini-flash-latest"
 
@@ -219,19 +224,37 @@ def get_gmail_service():
     return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
 
+def _execute_with_retry(request, attempts: int = 4):
+    """Execute a Gmail API request, backing off on rate-limit errors."""
+    for attempt in range(attempts):
+        try:
+            return request.execute()
+        except HttpError as e:
+            rate_limited = e.resp.status == 429 or (
+                e.resp.status == 403 and "rateLimitExceeded" in str(e)
+            )
+            if not rate_limited or attempt == attempts - 1:
+                raise
+            wait = 30 * (attempt + 1)
+            print(f"[debug] Gmail rate limit; retrying in {wait}s")
+            time.sleep(wait)
+
+
 def search_candidate_messages(service, since_utc: datetime):
     # Gmail search only supports day granularity for "after:", so we filter
     # more precisely afterward using the message's internalDate.
     after_str = since_utc.strftime("%Y/%m/%d")
-    query = f"{GMAIL_QUERY_TERMS} after:{after_str}"
 
     message_ids = []
-    request = service.users().messages().list(userId="me", q=query, maxResults=100)
-    while request is not None:
-        response = request.execute()
-        message_ids.extend(m["id"] for m in response.get("messages", []))
-        request = service.users().messages().list_next(request, response)
-    return message_ids
+    for terms in GMAIL_QUERIES:
+        query = f"{terms} after:{after_str}"
+        request = service.users().messages().list(userId="me", q=query, maxResults=100)
+        while request is not None:
+            response = _execute_with_retry(request)
+            message_ids.extend(m["id"] for m in response.get("messages", []))
+            request = service.users().messages().list_next(request, response)
+    # The searches overlap; keep the first occurrence of each ID.
+    return list(dict.fromkeys(message_ids))
 
 
 def _extract_plain_text(payload: dict) -> str:
@@ -247,11 +270,8 @@ def _extract_plain_text(payload: dict) -> str:
 
 
 def fetch_message_summary(service, msg_id: str):
-    msg = (
-        service.users()
-        .messages()
-        .get(userId="me", id=msg_id, format="full")
-        .execute()
+    msg = _execute_with_retry(
+        service.users().messages().get(userId="me", id=msg_id, format="full")
     )
     headers = {h["name"]: h["value"] for h in msg["payload"].get("headers", [])}
     internal_date_ms = int(msg["internalDate"])
