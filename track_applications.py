@@ -144,7 +144,18 @@ GMAIL_QUERIES = [
     for phrases in (CONFIRMATION_PHRASES, REJECTION_PHRASES, NEXT_STEP_PHRASES)
 ]
 
-GEMINI_MODEL = "gemini-flash-latest"
+# Applied to every search. Confirmations/rejections land in Primary or Updates;
+# Promotions/Social and job-alert digests are mostly noise that would use up
+# the Gemini free-tier quota. (LinkedIn's "application sent" emails come from
+# jobs-noreply@, not jobalerts-noreply@, so they are kept.)
+GMAIL_EXCLUDE = (
+    "-category:promotions -category:social "
+    "-from:jobalerts-noreply@linkedin.com -from:alert@indeed.com"
+)
+
+# Tried in order; when the first is overloaded (503) or rate-limited, the
+# lighter model usually still has capacity.
+GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 EXTRACTION_PROMPT = """You are helping track the status of job applications from emails \
 (e.g. from LinkedIn, Indeed, Greenhouse, Lever, Workday, iCIMS, SmartRecruiters, Ashby, \
@@ -262,7 +273,7 @@ def search_candidate_messages(service, since_utc: datetime):
 
     message_ids = []
     for terms in GMAIL_QUERIES:
-        query = f"{terms} after:{after_str}"
+        query = f"{terms} {GMAIL_EXCLUDE} after:{after_str}"
         request = service.users().messages().list(userId="me", q=query, maxResults=100)
         while request is not None:
             response = _execute_with_retry(request)
@@ -338,29 +349,32 @@ class LLMUnavailableError(Exception):
 
 
 def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
-    """Call Gemini, backing off on rate-limit / server errors (free tier is
-    easily rate-limited when several emails arrive in one day)."""
+    """Call Gemini, falling back across GEMINI_MODELS and backing off on
+    rate-limit / overload errors (common on the free tier)."""
     for attempt in range(attempts):
-        try:
-            return client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    max_output_tokens=2000,
-                    response_mime_type="application/json",
-                ),
-            )
-        except genai_errors.ClientError as e:
-            if e.code != 429:
-                raise
-            last_error = e
-        except (genai_errors.ServerError, httpx.HTTPError) as e:
-            # httpx.HTTPError covers dropped connections mid-request.
-            last_error = e
+        for model in GEMINI_MODELS:
+            try:
+                return client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        max_output_tokens=2000,
+                        response_mime_type="application/json",
+                    ),
+                )
+            except genai_errors.ClientError as e:
+                # 429: rate-limited; 404: model alias not available to this key.
+                if e.code not in (404, 429):
+                    raise
+                last_error = e
+            except (genai_errors.ServerError, httpx.HTTPError) as e:
+                # httpx.HTTPError covers dropped connections mid-request.
+                last_error = e
+            print(f"  [debug] Gemini {model} error ({last_error})")
         if attempt == attempts - 1:
             break
         wait = 15 * (attempt + 1)
-        print(f"  [debug] Gemini error ({last_error}); retrying in {wait}s")
+        print(f"  [debug] all Gemini models failed; retrying in {wait}s")
         time.sleep(wait)
     raise LLMUnavailableError(str(last_error))
 
