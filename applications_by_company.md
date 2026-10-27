@@ -6,7 +6,7 @@
 
 ## FocusKPI (1)
 - **Junior AI/ML Engineer (Remote)**
-  - Applied: 2026-07-30 via  — Status: Applied
+  - Applied: 2026-07-30 — Status: Applied
 
 ## Mphasis (1)
 - **Data Engineering** — Job ID: 29982625
