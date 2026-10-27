@@ -34,7 +34,15 @@ logs them to `applications.csv`, run daily by GitHub Actions.
      card required; this uses the genuinely free Gemini tier, not a trial
      credit that expires)
 
-4. Commit and push. The workflow runs automatically at ~23:55 PT daily, or
+4. **Optional: email summary.** To get an email on days with updates:
+   - Turn on 2-Step Verification for the tracked Gmail account, then create
+     an app password at https://myaccount.google.com/apppasswords.
+   - Add repo secrets `GMAIL_APP_PASSWORD` (the 16-character app password)
+     and `NOTIFY_EMAIL` (the address that should receive the summary).
+   - The summary is sent from the tracked mailbox. Leave the secrets out to
+     disable it.
+
+5. Commit and push. The workflow runs automatically at ~23:55 PT daily, or
    trigger it manually from the Actions tab ("Run workflow") to test it.
 
 ## How it works
@@ -68,7 +76,10 @@ logs them to `applications.csv`, run daily by GitHub Actions.
 - After each run, `applications.csv` is re-sorted so entries
   are grouped by company (then by date), and `applications_by_company.md` is
   regenerated as a readable, grouped-by-company summary.
-- Commits the updated CSV and summary back to the repo each run.
+- Commits the updated CSV and summary back to the repo each run. Progress is
+  saved after every email and committed even if a run fails partway.
+- On days with updates, emails a summary (new applications, next rounds with
+  their links, rejections, and overall totals) to `NOTIFY_EMAIL`.
 
 ## Troubleshooting
 

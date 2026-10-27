@@ -13,6 +13,7 @@ What it does:
    next-round emails update the status of the matching existing row (or add
    a new row if the original application was never logged).
 4. Updates the "last run" timestamp and the set of processed Gmail message IDs.
+5. On days with updates, emails a summary to NOTIFY_EMAIL (optional).
 
 Environment variables required (set as GitHub Actions secrets):
 - GMAIL_CLIENT_ID
@@ -20,6 +21,8 @@ Environment variables required (set as GitHub Actions secrets):
 - GMAIL_REFRESH_TOKEN        (reuse the same OAuth app you already use for
                                sending Gmail notifications in the job-application-agent)
 - GEMINI_API_KEY
+- GMAIL_APP_PASSWORD, NOTIFY_EMAIL (optional) -- send the daily summary from
+                               the tracked mailbox to NOTIFY_EMAIL
 
 Files this script reads/writes (relative to repo root):
 - applications.csv           the running log
@@ -31,8 +34,10 @@ import re
 import json
 import csv
 import base64
+import smtplib
 import sys
 import time
+from email.message import EmailMessage
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -42,6 +47,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+import httpx
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
@@ -236,7 +242,8 @@ def _execute_with_retry(request, attempts: int = 4):
     """Execute a Gmail API request, backing off on rate-limit errors."""
     for attempt in range(attempts):
         try:
-            return request.execute()
+            # num_retries covers 5xx responses and dropped connections.
+            return request.execute(num_retries=3)
         except HttpError as e:
             rate_limited = e.resp.status == 429 or (
                 e.resp.status == 403 and "rateLimitExceeded" in str(e)
@@ -347,7 +354,8 @@ def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
             if e.code != 429:
                 raise
             last_error = e
-        except genai_errors.ServerError as e:
+        except (genai_errors.ServerError, httpx.HTTPError) as e:
+            # httpx.HTTPError covers dropped connections mid-request.
             last_error = e
         if attempt == attempts - 1:
             break
@@ -439,8 +447,8 @@ def find_matching_row(rows: list[dict], company: str | None, role: str | None) -
     return max(candidates, key=lambda r: r["date_applied"])
 
 
-def record_email(rows: list[dict], email: dict, extracted: dict) -> str:
-    """Apply one classified email to rows. Returns a short description."""
+def record_email(rows: list[dict], email: dict, extracted: dict) -> tuple[str, dict]:
+    """Apply one classified email to rows. Returns ("added" | "updated", row)."""
     status = EMAIL_TYPE_TO_STATUS[extracted["email_type"]]
     email_date = email["internal_date"].strftime("%Y-%m-%d")
 
@@ -454,10 +462,9 @@ def record_email(rows: list[dict], email: dict, extracted: dict) -> str:
             for field in ("role", "job_id", "skills_required", "platform"):
                 if not row[field] and extracted.get(field):
                     row[field] = extracted[field]
-            return f"updated {row['company']} / {row['role'] or '?'} -> {status}"
+            return "updated", row
 
-    rows.append(
-        {
+    row = {
             "company": extracted.get("company") or "",
             "role": extracted.get("role") or "",
             "job_id": extracted.get("job_id") or "",
@@ -471,9 +478,9 @@ def record_email(rows: list[dict], email: dict, extracted: dict) -> str:
             "gmail_message_id": email["id"],
             "status_updated": email_date,
             "next_step_details": extracted.get("next_step_details") or "",
-        }
-    )
-    return f"added {extracted.get('company') or '?'} / {extracted.get('role') or '?'} as {status}"
+    }
+    rows.append(row)
+    return "added", row
 
 
 def write_grouped_summary():
@@ -503,6 +510,72 @@ def write_grouped_summary():
         lines.append("")
 
     (REPO_ROOT / "applications_by_company.md").write_text("\n".join(lines))
+
+
+# ---------------------------------------------------------------------------
+# Email summary
+# ---------------------------------------------------------------------------
+
+STATUS_HEADINGS = [
+    (STATUS_APPLIED, "Applied"),
+    (STATUS_NEXT_ROUND, "Next round"),
+    (STATUS_REJECTED, "Rejected"),
+]
+
+
+def build_summary_email(updates: list[dict], rows: list[dict]) -> tuple[str, str]:
+    """Return (subject, body) for the run's updates, grouped by status."""
+    today = datetime.now(timezone.utc).strftime("%d %b %Y")
+    lines = [f"Job tracker update - {today}", ""]
+    for status, heading in STATUS_HEADINGS:
+        group = [r for r in updates if r["status"] == status]
+        if not group:
+            continue
+        lines.append(f"{heading} ({len(group)}):")
+        for r in group:
+            lines.append(f"  - {r['company'] or 'Unknown company'} - {r['role'] or 'Unknown role'}")
+            if r["next_step_details"]:
+                lines.append(f"      Next step: {r['next_step_details']}")
+        lines.append("")
+
+    totals = " / ".join(
+        f"{sum(r['status'] == status for r in rows)} {heading.lower()}"
+        for status, heading in STATUS_HEADINGS
+    )
+    lines.append(f"All applications: {totals}")
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    if repo:
+        server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+        lines.append(f"Full list: {server}/{repo}/blob/HEAD/applications_by_company.md")
+
+    subject = f"Job tracker: {len(updates)} update(s) - {today}"
+    return subject, "\n".join(lines)
+
+
+def send_summary_email(sender: str, updates: list[dict], rows: list[dict]):
+    """Email the summary via Gmail SMTP using an app password. Skipped quietly
+    if not configured; a send failure is reported but doesn't fail the run."""
+    password = os.environ.get("GMAIL_APP_PASSWORD")
+    recipient = os.environ.get("NOTIFY_EMAIL")
+    if not (password and recipient):
+        print("[debug] email summary not configured (GMAIL_APP_PASSWORD / NOTIFY_EMAIL)")
+        return
+
+    subject, body = build_summary_email(updates, rows)
+    msg = EmailMessage()
+    msg["From"] = sender
+    msg["To"] = recipient
+    msg["Subject"] = subject
+    msg.set_content(body)
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as smtp:
+            # Google shows app passwords in groups of four; spaces are optional.
+            smtp.login(sender, password.replace(" ", ""))
+            smtp.send_message(msg)
+    except (smtplib.SMTPException, OSError) as e:
+        gh_annotation("warning", "Email not sent", f"Could not send summary to {recipient}: {e}")
+        return
+    gh_annotation("notice", "Email sent", f"Summary of {len(updates)} update(s) sent to {recipient}")
 
 
 # ---------------------------------------------------------------------------
@@ -551,6 +624,15 @@ def main():
     emails.sort(key=lambda e: e["internal_date"])
     rows = load_rows()
 
+    def persist():
+        # Saved after every email so a crash mid-run keeps the work done so
+        # far; the workflow commits these files even when this step fails.
+        save_rows(rows)
+        write_grouped_summary()
+        state["processed_ids"] = list(processed_ids)[-2000:]  # cap growth
+        save_state(state)
+
+    updates = []
     for email in emails:
         msg_id = email["id"]
         try:
@@ -567,22 +649,25 @@ def main():
             break
         processed_ids.add(msg_id)  # mark as seen regardless, to avoid reprocessing
 
-        if extracted is None:
-            continue
-
-        print(f"[debug] {msg_id}: {record_email(rows, email, extracted)}")
-        changes += 1
-
-    # Always rewrite, so older CSVs pick up the newer columns.
-    save_rows(rows)
-    write_grouped_summary()
+        if extracted is not None:
+            action, row = record_email(rows, email, extracted)
+            print(f"[debug] {msg_id}: {action} {row['company']} / {row['role'] or '?'} -> {row['status']}")
+            # A row updated twice in one run (e.g. applied, then assessment)
+            # is reported once, with its latest status.
+            if not any(u is row for u in updates):
+                updates.append(row)
+            changes += 1
+        persist()
 
     # On a Gemini outage keep the old window so skipped emails are retried;
     # processed_ids prevents the ones already handled from being re-logged.
     if not llm_failed:
         state["last_run_utc"] = run_started.isoformat()
-    state["processed_ids"] = list(processed_ids)[-2000:]  # cap growth
-    save_state(state)
+    # Always rewrite, so older CSVs pick up the newer columns.
+    persist()
+
+    if updates:
+        send_summary_email(mailbox, updates, rows)
 
     gh_annotation(
         "notice",
