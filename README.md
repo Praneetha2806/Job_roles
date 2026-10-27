@@ -2,8 +2,10 @@
 
 Reads job-application emails from Gmail every night and keeps track of every
 application you have sent: confirmations, rejections, and next-round
-invitations (assessments, surveys, interviews). It runs on GitHub Actions and
-needs no server.
+invitations (assessments, surveys, interviews). It runs free on GitHub Actions
+and the Gemini free tier, with no server to maintain.
+
+**Live example:** https://praneetha2806.github.io/Job_roles/
 
 Each run:
 
@@ -11,13 +13,38 @@ Each run:
 - emails you a summary on days with updates, and a separate "Action
   needed" reminder for each application that moves to a next round
   (optional), and
-- refreshes the dashboard at
-  **https://praneetha2806.github.io/Job_roles/** (once GitHub Pages is on).
+- refreshes your dashboard at `https://<your-username>.github.io/<repo-name>/`
+  (once GitHub Pages is on).
 
-> **Privacy:** this repo and its dashboard are public, so anyone with the link
-> can see the companies and roles you applied to. To keep them private, make
-> the repo private (Settings → General → Danger Zone). GitHub Pages on a
-> private repo needs a paid GitHub plan.
+## Use it for your own job search
+
+About 30 minutes, once. You need a GitHub account and the Gmail account your
+job emails go to.
+
+1. **Copy the repo.** On this repo's GitHub page, click **Use this template →
+   Create a new repository** (or **Fork**). Choose a name and whether it is
+   public or private (see Privacy below).
+2. **Set up Google and the secrets:** follow [Setup](#setup) steps 1–5
+   below.
+3. **Start fresh.** In your copy, go to **Actions**, enable workflows if asked,
+   then **Track Job Applications → Run workflow** and fill in:
+   - **reset:** `RESET` (removes the example applications that came with the
+     copy)
+   - **start_date:** the first day to track, e.g. two weeks ago, as
+     `YYYY-MM-DD`
+4. **Turn on the dashboard:** see [Dashboard](#dashboard).
+5. **Optional:** change the nightly time for your time zone (see
+   [Setup](#setup) step 6), and edit the keyword lists for the wording your
+   emails use (see [How it works](#how-it-works)).
+
+From then on it runs every night by itself.
+
+> **Privacy:** in a public repo, anyone can see `applications.csv` and the
+> dashboard, so the companies and roles you applied to are visible. To keep
+> them private, make the repo private (Settings → General → Danger Zone →
+> Change visibility); the tracker works the same. GitHub Pages on a private
+> repo needs a paid GitHub plan; without it, open `applications_by_company.md`
+> on GitHub instead.
 
 ## What's in the repo
 
@@ -113,8 +140,9 @@ Save. After a minute or two it is at
 
 ## Setup
 
-These steps are only needed for a fresh setup or to move to a different
-Gmail account.
+Needed once for a new copy, or to move to a different Gmail account. Your
+secrets stay in your own GitHub repo and Google account; nothing is shared
+with the repo you copied from.
 
 ### 1. Google Cloud project (for Gmail access)
 
@@ -180,17 +208,22 @@ Settings → Secrets and variables → Actions → **New repository secret**:
 ### 6. Run it
 
 The workflow runs every night at 06:55 UTC: 11:55 PM Pacific during daylight
-saving time, 10:55 PM in winter. To run it now: **Actions → Track Job
-Applications → Run workflow**.
+saving time, 10:55 PM in winter. For another time zone, change the `cron`
+line in `.github/workflows/track-applications.yml`; it is in UTC (for
+example `"30 18 * * *"` is midnight in India). To run it now: **Actions →
+Track Job Applications → Run workflow**. The first time, set **start_date**
+to the first day you want tracked; otherwise it looks back 7 days.
 
 ## Day-to-day
 
 - **See what a run did:** open the run in the Actions tab. The summary at the
   top shows the mailbox it read, how many emails it checked and recorded,
   whether the email was sent, and any warning or crash.
-- **Change where tracking starts:** edit `last_run_utc` in
-  `state/last_run.json` (for example `"2026-10-12T00:00:00+00:00"`), commit,
-  and run the workflow. Emails already processed are skipped.
+- **Re-scan from an earlier date:** **Run workflow** with **start_date** set
+  (e.g. `2026-10-01`). Emails already processed are skipped, so nothing is
+  counted twice.
+- **Start over:** **Run workflow** with **reset** set to `RESET`. This deletes
+  every tracked application; the old data stays in the repo's git history.
 - **Gemini's free tier allows about 500 requests a day.** A normal day is well
   under that. When catching up on a long period, a run may stop at the limit;
   the next run continues where it left off.
@@ -206,6 +239,8 @@ Applications → Run workflow**.
 | Warning "Gemini unavailable" on a run | Gemini was busy or the daily limit was reached. Nothing is lost; the next run retries those emails. |
 | Warning "Email not sent" or "Reminder not sent" | Check the `GMAIL_APP_PASSWORD` and `NOTIFY_EMAIL` secrets. A new App Password is needed if 2-Step Verification was turned off and on again. |
 | Workflow shows "disabled" | GitHub turns off scheduled workflows after 60 days without repo activity. **Actions → Track Job Applications → Enable workflow**. |
+| Run fails with "start date … is not a date like 2026-10-01" | Type the start date as `YYYY-MM-DD`. |
+| The dashboard or CSV shows someone else's applications | Your copy still has the example data. Run the workflow once with **reset** set to `RESET`. |
 | Dashboard shows "Couldn't load your applications" | GitHub Pages is off or still deploying. Check Settings → Pages, wait a minute, and refresh. |
 
 ## Ideas for later

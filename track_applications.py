@@ -22,6 +22,9 @@ Environment variables required (set as GitHub Actions secrets):
 - GMAIL_REFRESH_TOKEN        (reuse the same OAuth app you already use for
                                sending Gmail notifications in the job-application-agent)
 - GEMINI_API_KEY
+- START_DATE (optional)        YYYY-MM-DD; scan emails from this date instead
+                               of the last run (set from the Run workflow form)
+- RESET_DATA (optional)        "RESET" clears all tracked applications first
 - GMAIL_APP_PASSWORD, NOTIFY_EMAIL (optional) -- send the daily summary from
                                the tracked mailbox to NOTIFY_EMAIL
 
@@ -39,7 +42,7 @@ import smtplib
 import sys
 import time
 from email.message import EmailMessage
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from google.oauth2.credentials import Credentials
@@ -662,16 +665,35 @@ def send_notifications(sender: str, updates: list[dict], rows: list[dict]):
 # Main
 # ---------------------------------------------------------------------------
 
+def parse_start_date(value: str) -> datetime:
+    try:
+        return datetime.strptime(value.strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        sys.exit(f"ERROR: start date {value!r} is not a date like 2026-10-01 (YYYY-MM-DD).")
+
+
 def main():
     check_env()
+    start_date = os.environ.get("START_DATE", "").strip()
+    since_override = parse_start_date(start_date) if start_date else None
+
+    if os.environ.get("RESET_DATA", "").strip().upper() == "RESET":
+        # Fresh start, e.g. after copying this repo as a template.
+        save_rows([])
+        save_state({"last_run_utc": None, "processed_ids": []})
+        gh_annotation("notice", "Reset", "Cleared all tracked applications; starting fresh.")
+
     state = load_state()
     processed_ids = set(state.get("processed_ids", []))
 
-    if state.get("last_run_utc"):
+    if since_override:
+        # Already-processed emails are still skipped, so this never double-counts.
+        since = since_override
+    elif state.get("last_run_utc"):
         since = datetime.fromisoformat(state["last_run_utc"])
     else:
-        # first run: look back 1 day
-        since = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        # First run with no start date: look back 7 days.
+        since = (datetime.now(timezone.utc) - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     gmail = get_gmail_service()
     mailbox = gmail.users().getProfile(userId="me").execute()["emailAddress"]

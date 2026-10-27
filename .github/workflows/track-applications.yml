@@ -8,7 +8,17 @@ on:
     # hour by 1 around DST changes if exact EOD timing matters to you, or
     # keep two schedule entries and let the no-op runs be harmless.
     - cron: "55 6 * * *"
-  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
+  # Run it by hand from the Actions tab ("Run workflow"), optionally with:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "Optional: scan emails from this date (YYYY-MM-DD). Leave blank to continue from the last run."
+        required: false
+        default: ""
+      reset:
+        description: "Optional: type RESET to delete all tracked applications and start fresh (e.g. after copying this repo)."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -35,6 +45,8 @@ jobs:
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          START_DATE: ${{ inputs.start_date }}
+          RESET_DATA: ${{ inputs.reset }}
           # Optional: email a summary on days with updates.
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
