@@ -564,4 +564,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        import traceback
+        gh_annotation("error", "Tracker crashed", traceback.format_exc()[-3000:])
+        raise
