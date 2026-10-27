@@ -41,8 +41,11 @@ def main():
         },
         SCOPES,
     )
-    # prompt="consent" forces Google to issue a fresh refresh token.
-    creds = flow.run_local_server(port=0, access_type="offline", prompt="consent")
+    # "consent" forces Google to issue a fresh refresh token; "select_account"
+    # shows the account picker instead of reusing the browser's signed-in account.
+    creds = flow.run_local_server(
+        port=0, access_type="offline", prompt="consent select_account"
+    )
     profile = build("gmail", "v1", credentials=creds).users().getProfile(userId="me").execute()
     print(f"\nAuthorized mailbox: {profile['emailAddress']}")
     print("\nGMAIL_REFRESH_TOKEN:\n")
