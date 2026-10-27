@@ -15,8 +15,14 @@ logs them to `applications.csv`, run daily by GitHub Actions.
    `https://www.googleapis.com/auth/gmail.readonly` (add it and
    re-consent once if it doesn't). Otherwise:
    - Create an OAuth client in Google Cloud Console (Desktop app type).
-   - Run a one-time local script to authorize and print a refresh token
-     (happy to write that helper script too if you need it).
+   - Run `pip install google-auth-oauthlib` then
+     `python get_refresh_token.py <CLIENT_ID> <CLIENT_SECRET>` locally to
+     authorize and print a refresh token.
+   - **Publish the OAuth consent screen** (Google Auth Platform → Audience →
+     "Publish app", status "In production"). While it is in "Testing",
+     Google expires refresh tokens after 7 days and the workflow fails with
+     `invalid_grant`. A personal unverified app works fine for your own
+     account; just click through the "unverified app" warning once.
 
 3. **Add repo secrets** (Settings → Secrets and variables → Actions):
    - `GMAIL_CLIENT_ID`
@@ -46,6 +52,19 @@ logs them to `applications.csv`, run daily by GitHub Actions.
   are grouped by company (then by date), and `applications_by_company.md` is
   regenerated as a readable, grouped-by-company summary.
 - Commits the updated CSV and summary back to the repo each run.
+
+## Troubleshooting
+
+- **Run fails with "Gmail OAuth refresh failed" / `invalid_grant`** — the
+  refresh token expired or was revoked. Publish the consent screen (see
+  above), generate a new token with `get_refresh_token.py`, and update the
+  `GMAIL_REFRESH_TOKEN` secret.
+- **Workflow shows "disabled"** — GitHub turns off scheduled workflows after
+  60 days without repo activity. Re-enable it from the Actions tab
+  (Track Job Applications → "Enable workflow").
+- **Gemini rate limits** — the script retries with backoff. If Gemini is
+  still unavailable, it stops early and keeps the previous time window, so
+  remaining emails are picked up on the next run.
 
 ## Extending
 
