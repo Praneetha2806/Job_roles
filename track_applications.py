@@ -6,7 +6,7 @@ End-of-day job application tracker.
 What it does:
 1. Searches Gmail for likely application-confirmation emails received since the
    last successful run (tracked in state/last_run.json).
-2. Sends each candidate email's subject + sender + snippet to Claude, which
+2. Sends each candidate email's subject + sender + body to Gemini, which
    decides whether it's really an application confirmation and extracts
    structured fields (company, role, platform).
 3. Appends new, deduplicated rows to applications.csv.
@@ -28,14 +28,18 @@ import os
 import json
 import csv
 import base64
+import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from google.oauth2.credentials import Credentials
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types as genai_types
 
 # ---------------------------------------------------------------------------
@@ -121,6 +125,23 @@ Respond with ONLY a JSON object, no other text, in this exact shape:
 # Gmail
 # ---------------------------------------------------------------------------
 
+REQUIRED_ENV_VARS = [
+    "GMAIL_CLIENT_ID",
+    "GMAIL_CLIENT_SECRET",
+    "GMAIL_REFRESH_TOKEN",
+    "GEMINI_API_KEY",
+]
+
+
+def check_env():
+    missing = [name for name in REQUIRED_ENV_VARS if not os.environ.get(name)]
+    if missing:
+        sys.exit(
+            f"ERROR: missing required environment variable(s): {', '.join(missing)}. "
+            "Add them under Settings -> Secrets and variables -> Actions."
+        )
+
+
 def get_gmail_service():
     creds = Credentials(
         token=None,
@@ -130,8 +151,19 @@ def get_gmail_service():
         token_uri="https://oauth2.googleapis.com/token",
         scopes=["https://www.googleapis.com/auth/gmail.readonly"],
     )
-    creds.refresh(Request())
-    return build("gmail", "v1", credentials=creds)
+    try:
+        creds.refresh(Request())
+    except RefreshError as e:
+        sys.exit(
+            f"ERROR: Gmail OAuth refresh failed: {e}\n"
+            "Check the GMAIL_* secrets. Most often (invalid_grant) the refresh "
+            "token has expired or been revoked: if your "
+            "Google Cloud OAuth consent screen is in 'Testing' mode, refresh tokens "
+            "expire after 7 days -- set it to 'In production' (Google Auth Platform "
+            "-> Audience -> Publish app), then run get_refresh_token.py locally and "
+            "update the GMAIL_REFRESH_TOKEN secret."
+        )
+    return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
 
 def search_candidate_messages(service, since_utc: datetime):
@@ -197,18 +229,42 @@ def contains_confirmation_phrase(email: dict) -> bool:
     return any(phrase in haystack for phrase in CONFIRMATION_PHRASES)
 
 
+class LLMUnavailableError(Exception):
+    """Gemini could not be reached; the email should be retried next run."""
+
+
+def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
+    """Call Gemini, backing off on rate-limit / server errors (free tier is
+    easily rate-limited when several emails arrive in one day)."""
+    for attempt in range(attempts):
+        try:
+            return client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    max_output_tokens=2000,
+                    response_mime_type="application/json",
+                ),
+            )
+        except genai_errors.ClientError as e:
+            if e.code != 429:
+                raise
+            last_error = e
+        except genai_errors.ServerError as e:
+            last_error = e
+        if attempt == attempts - 1:
+            break
+        wait = 15 * (attempt + 1)
+        print(f"  [debug] Gemini error ({last_error}); retrying in {wait}s")
+        time.sleep(wait)
+    raise LLMUnavailableError(str(last_error))
+
+
 def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
     prompt = EXTRACTION_PROMPT.format(
         sender=email["sender"], subject=email["subject"], snippet=email["snippet"]
     )
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config=genai_types.GenerateContentConfig(
-            max_output_tokens=2000,
-            response_mime_type="application/json",
-        ),
-    )
+    response = generate_with_retry(client, prompt)
     text = (response.text or "").strip()
     print(f"  [debug] subject={email['subject']!r}")
     print(f"  [debug] phrase_match={contains_confirmation_phrase(email)}")
@@ -297,6 +353,7 @@ def write_grouped_summary():
 # ---------------------------------------------------------------------------
 
 def main():
+    check_env()
     state = load_state()
     processed_ids = set(state.get("processed_ids", []))
 
@@ -309,10 +366,14 @@ def main():
     ensure_csv()
 
     gmail = get_gmail_service()
+    mailbox = gmail.users().getProfile(userId="me").execute()["emailAddress"]
+    print(f"[debug] scanning mailbox {mailbox}")
     llm = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
+    run_started = datetime.now(timezone.utc)
     candidate_ids = search_candidate_messages(gmail, since)
     new_rows = 0
+    llm_failed = False
     print(f"[debug] since={since.isoformat()}")
 
     for msg_id in candidate_ids:
@@ -328,7 +389,14 @@ def main():
             )
             continue
 
-        extracted = extract_with_llm(llm, email)
+        try:
+            extracted = extract_with_llm(llm, email)
+        except LLMUnavailableError as e:
+            # Leave it unprocessed and stop here; last_run_utc is held back
+            # below so this email is picked up again on the next run.
+            print(f"[debug] {msg_id}: Gemini unavailable ({e}); will retry next run")
+            llm_failed = True
+            break
         processed_ids.add(msg_id)  # mark as seen regardless, to avoid reprocessing
 
         if extracted is None:
@@ -353,7 +421,10 @@ def main():
         sort_csv_by_company()
         write_grouped_summary()
 
-    state["last_run_utc"] = datetime.now(timezone.utc).isoformat()
+    # On a Gemini outage keep the old window so skipped emails are retried;
+    # processed_ids prevents the ones already handled from being re-logged.
+    if not llm_failed:
+        state["last_run_utc"] = run_started.isoformat()
     state["processed_ids"] = list(processed_ids)[-2000:]  # cap growth
     save_state(state)
 
