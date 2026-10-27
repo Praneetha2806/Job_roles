@@ -23,12 +23,30 @@ on:
 permissions:
   contents: write
 
+# One run at a time, so two runs never push to the data branch at once.
+concurrency:
+  group: track-applications
+  cancel-in-progress: false
+
 jobs:
   track:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
+
+      # The tracker's data (CSV, summary, state) lives on the `data` branch,
+      # so copies of `main` start empty. A new copy creates the branch here.
+      - name: Check out the data branch
+        run: |
+          if git fetch --depth=1 origin data:data; then
+            git worktree add tracker-data data
+          else
+            echo "No data branch yet; creating an empty one."
+            git worktree add --detach tracker-data
+            git -C tracker-data checkout --orphan data
+            git -C tracker-data rm -rfq --ignore-unmatch .
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -50,17 +68,16 @@ jobs:
           # Optional: email a summary on days with updates.
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          TRACKER_DATA_DIR: tracker-data
         run: python track_applications.py
 
-      - name: Commit updated CSV and state
+      - name: Commit updated data to the data branch
         # Also after a failed run, to keep the progress it saved.
         if: success() || failure()
+        working-directory: tracker-data
         run: |
           git config user.name "application-tracker-bot"
           git config user.email "actions@github.com"
-          git add applications.csv state/last_run.json
-          if [ -f applications_by_company.md ]; then
-            git add applications_by_company.md
-          fi
+          git add -A
           git diff --cached --quiet || git commit -m "Log applications for $(date -u +%Y-%m-%d)"
-          git push
+          git push origin data

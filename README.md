@@ -9,7 +9,8 @@ and the Gemini free tier, with no server to maintain.
 
 Each run:
 
-- updates `applications.csv` and `applications_by_company.md` in this repo,
+- updates `applications.csv` and `applications_by_company.md` on the repo's
+  `data` branch,
 - emails you a summary on days with updates, and a separate "Action
   needed" reminder for each application that moves to a next round
   (optional), and
@@ -22,16 +23,17 @@ About 30 minutes, once. You need a GitHub account and the Gmail account your
 job emails go to.
 
 1. **Copy the repo.** On this repo's GitHub page, click **Use this template →
-   Create a new repository** (or **Fork**). Choose a name and whether it is
-   public or private (see Privacy below).
+   Create a new repository** (leave "Include all branches" unticked), or
+   **Fork** (leave "Copy the main branch only" ticked). Choose a name and
+   whether it is public or private (see Privacy below). Your copy has only
+   the code; the original owner's applications live on their `data` branch
+   and are not copied.
 2. **Set up Google and the secrets:** follow [Setup](#setup) steps 1–5
    below.
-3. **Start fresh.** In your copy, go to **Actions**, enable workflows if asked,
-   then **Track Job Applications → Run workflow** and fill in:
-   - **reset:** `RESET` (removes the example applications that came with the
-     copy)
-   - **start_date:** the first day to track, e.g. two weeks ago, as
-     `YYYY-MM-DD`
+3. **First run.** In your copy, go to **Actions**, enable workflows if asked,
+   then **Track Job Applications → Run workflow**, set **start_date** to the
+   first day to track (e.g. two weeks ago, as `YYYY-MM-DD`), and run it. It
+   creates your own `data` branch.
 4. **Turn on the dashboard:** see [Dashboard](#dashboard).
 5. **Optional:** change the nightly time for your time zone (see
    [Setup](#setup) step 6), and edit the keyword lists for the wording your
@@ -39,25 +41,33 @@ job emails go to.
 
 From then on it runs every night by itself.
 
-> **Privacy:** in a public repo, anyone can see `applications.csv` and the
+> **Privacy:** in a public repo, anyone can open the `data` branch and the
 > dashboard, so the companies and roles you applied to are visible. To keep
 > them private, make the repo private (Settings → General → Danger Zone →
 > Change visibility); the tracker works the same. GitHub Pages on a private
 > repo needs a paid GitHub plan; without it, open `applications_by_company.md`
-> on GitHub instead.
+> on the `data` branch instead.
 
 ## What's in the repo
 
 | File | What it is |
 |---|---|
 | `track_applications.py` | The tracker: searches Gmail, classifies emails with Gemini, updates the CSV, sends the summary email |
-| `.github/workflows/track-applications.yml` | Runs the tracker nightly and commits the results |
-| `applications.csv` | Every tracked application, one row each |
-| `applications_by_company.md` | The same data grouped by company, readable on GitHub |
-| `index.html` | The dashboard, published with GitHub Pages |
-| `state/last_run.json` | Where the next run starts, and which emails were already processed |
+| `.github/workflows/track-applications.yml` | Runs the tracker nightly and commits the results to the `data` branch |
+| `.github/workflows/publish-dashboard.yml` | Publishes the dashboard to GitHub Pages after every run |
+| `index.html` | The dashboard |
 | `get_refresh_token.py` | One-time helper you run on your own computer to create the Gmail token |
 | `requirements.txt` | Python packages the workflow installs |
+| `LICENSE` | MIT license: anyone may use, copy and change this code |
+
+The data lives on a separate **`data` branch**, so copies of the code start
+empty and every nightly run is a commit you can look back through:
+
+| File on `data` | What it is |
+|---|---|
+| `applications.csv` | Every tracked application, one row each |
+| `applications_by_company.md` | The same data grouped by company, readable on GitHub |
+| `state/last_run.json` | Where the next run starts, and which emails were already processed |
 
 ## How it works
 
@@ -79,13 +89,17 @@ From then on it runs every night by itself.
    |---|---|---|
    | Confirmation | thank you, thank you for applying, thanks for applying, we have received your application | New row with status `Applied` |
    | Rejection | unfortunately, large volume, unable, not moving forward, we have decided, other candidate(s) | That application's row changes to `Rejected` |
-   | Next step | assessment, survey, next round, next step, interview, coding challenge, online test, HackerRank, CodeSignal | That application's row changes to `Next Round`, and the link is saved |
+   | Next step | assessment, survey, next round, next step, interview, coding challenge, online test, HackerRank, CodeSignal | That application's row changes to `Next Round`, with the step type, due date and link |
+   | Offer | offer letter, pleased to offer, job offer | That application's row changes to `Offer` |
 
    A rejection or next-step email is matched to an existing row by company,
    preferring the same role, then the most recent application. If no
    application was logged for that company, a new row is added with that
    status. Emails are handled oldest first, so a confirmation is logged
-   before a later rejection for the same job.
+   before a later rejection for the same job. A second confirmation for the
+   same company and role within 3 days (for example LinkedIn's "application
+   sent" plus the company's own email) only fills in missing details instead
+   of adding a duplicate row.
 4. **Save and commit.** Progress is saved after every email. The workflow
    commits the CSV, summary and state back to the repo, even if a run fails
    partway, so finished work is never lost.
@@ -93,21 +107,22 @@ From then on it runs every night by itself.
    - a summary of new applications, next rounds with their links,
      rejections, and overall totals, and
    - a separate **"Action needed: next round at <company>"** reminder for each
-     application that moved to a next round, with what to do, the link, and
-     the dates.
+     application that moved to a next round, with what to do, the type, the
+     due date or interview date when the email gives one, the link, and the
+     dates, and
+   - an **"Offer from <company>"** email for each offer.
 
 ### When a company replies to an earlier application
 
 Nothing to do on your side. The next nightly run finds the reply, Gemini
 reads it, and the tracker finds that application's existing row in
 `applications.csv` (same company, preferring the same role) and changes its
-status, instead of adding a new row. The run commits the updated CSV, and
-the dashboard shows the change the next time it is opened, after GitHub Pages
-redeploys (a minute or two). Replies are picked up at the nightly run, or
+status, instead of adding a new row. The run commits the updated CSV to the
+`data` branch, and the dashboard is republished a minute or two later. Replies are picked up at the nightly run, or
 sooner if you run the workflow by hand.
 
-To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES` and
-`NEXT_STEP_PHRASES` near the top of `track_applications.py`.
+To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES`,
+`NEXT_STEP_PHRASES` and `OFFER_PHRASES` near the top of `track_applications.py`.
 
 ### `applications.csv` columns
 
@@ -117,26 +132,50 @@ To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES` and
 | `job_id`, `skills_required` | Only filled in when the email contains them; never guessed |
 | `date_applied` | Date of the confirmation email (or of the first status email, if no confirmation was found) |
 | `platform` | Where you applied, e.g. LinkedIn, Workday, Greenhouse |
-| `status` | `Applied`, `Next Round` or `Rejected` |
+| `status` | `Applied`, `Next Round`, `Offer` or `Rejected` |
 | `email_subject`, `gmail_message_id` | The email the row was created from |
 | `status_updated` | Date of the latest rejection or next-step email |
 | `next_step_details` | What to do next and the link, for next rounds |
+| `next_step_type` | `Assessment`, `Survey`, `Interview` or `Other` |
+| `next_step_due` | Deadline to complete the step, or the interview date (`YYYY-MM-DD`), when the email gives one |
+| `first_response_date` | Date of the first reply of any kind, used for reply-time measures |
+| `work_mode` | `Remote`, `Hybrid` or `On-site`, when mentioned |
+| `location` | Job location, when mentioned |
+| `employment_type` | `Full-time`, `Part-time`, `Contract`, `Internship` or `Temporary`, when mentioned |
+| `salary` | Pay or range as written in the email, when mentioned |
+
+The last seven columns were added later, so applications logged before then
+have them blank; they fill in for new emails.
 
 ## Dashboard
 
-`index.html` shows:
+`index.html` shows, top to bottom:
 
-- totals: applications, waiting to hear, next rounds, rejections, response rate
-- applications per day as a weekday × week matrix, with weekly totals
-- applications by company (sortable and searchable)
-- rejections so far, with days from applying to the rejection
-- next rounds, with the link from each email
+- **Totals:** applications, reply rate, next rounds, offers, rejections, and
+  applications with no reply after 2 weeks.
+- **Needs your attention:** open next rounds and offers, soonest deadline
+  first, with the step type, due date (highlighted when 3 days or less) and
+  the link.
+- **How your search is going:**
+  - a funnel from applied to reply, next round and offer, with the median
+    days to a reply
+  - applications still waiting, by how long ago you applied (0–7, 8–14,
+    15–30, 30+ days)
+  - applications sent and replies received per week
+  - applications per day as a weekday × week matrix
+- **What gets replies:** reply rate and next rounds by platform and by role
+  type (role titles grouped by keywords such as "Data Engineer" or
+  "Analyst"), plus work mode and employment type when emails mention them.
+- **All applications:** by company (sortable and searchable), and every
+  rejection with days from applying.
 
-It reads `applications.csv` each time it is opened, so it is up to date
-after every run. To publish it: Settings → Pages → Build and deployment →
-Source **Deploy from a branch**, Branch **main**, folder **/ (root)** →
-Save. After a minute or two it is at
-`https://<your-username>.github.io/<repo-name>/`.
+The **Publish dashboard** workflow republishes it after every tracker run,
+with the latest `applications.csv` from the `data` branch. To turn it on:
+Settings → Pages → Build and deployment → Source **GitHub Actions**. Then
+**Actions → Publish dashboard → Run workflow** once (later runs are
+automatic). After a minute or two it is at
+`https://<your-username>.github.io/<repo-name>/`. Until Pages is on, the
+workflow skips publishing and leaves a note on its run.
 
 ## Setup
 
@@ -223,7 +262,11 @@ to the first day you want tracked; otherwise it looks back 7 days.
   (e.g. `2026-10-01`). Emails already processed are skipped, so nothing is
   counted twice.
 - **Start over:** **Run workflow** with **reset** set to `RESET`. This deletes
-  every tracked application; the old data stays in the repo's git history.
+  every tracked application; the old data stays in the `data` branch's
+  history.
+- **See how your data changed:** the `data` branch's commit history has one
+  commit per run (`Log applications for <date>`), so you can see what changed
+  on any day.
 - **Gemini's free tier allows about 500 requests a day.** A normal day is well
   under that. When catching up on a long period, a run may stop at the limit;
   the next run continues where it left off.
@@ -240,12 +283,15 @@ to the first day you want tracked; otherwise it looks back 7 days.
 | Warning "Email not sent" or "Reminder not sent" | Check the `GMAIL_APP_PASSWORD` and `NOTIFY_EMAIL` secrets. A new App Password is needed if 2-Step Verification was turned off and on again. |
 | Workflow shows "disabled" | GitHub turns off scheduled workflows after 60 days without repo activity. **Actions → Track Job Applications → Enable workflow**. |
 | Run fails with "start date … is not a date like 2026-10-01" | Type the start date as `YYYY-MM-DD`. |
-| The dashboard or CSV shows someone else's applications | Your copy still has the example data. Run the workflow once with **reset** set to `RESET`. |
-| Dashboard shows "Couldn't load your applications" | GitHub Pages is off or still deploying. Check Settings → Pages, wait a minute, and refresh. |
+| The dashboard or CSV shows someone else's applications | Your copy included the original `data` branch. Run the workflow once with **reset** set to `RESET`. |
+| Dashboard shows "Couldn't load your applications" or the Pages address shows 404 | Check that Settings → Pages → Source is **GitHub Actions**, then run **Actions → Publish dashboard → Run workflow**. |
 
 ## Ideas for later
 
-- Merge duplicate rows when both LinkedIn and the company's own system confirm
-  the same application.
-- Add an "Interview" status separate from assessments and surveys.
-- Add filters to the dashboard (date range, platform).
+- Add filters to the dashboard (date range, platform, role type).
+- Re-read older emails to fill in the newer columns for past applications.
+- A weekly digest of open next rounds whose due date is near.
+
+## License
+
+[MIT](LICENSE): free to use, copy, change and share, with no warranty.

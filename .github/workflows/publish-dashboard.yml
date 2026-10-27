@@ -1,0 +1,74 @@
+name: Publish dashboard
+
+# Publishes index.html (from main) together with applications.csv (from the
+# data branch) to GitHub Pages. Runs after every tracker run, when the
+# dashboard changes, or by hand. Needs Settings -> Pages -> Source set to
+# "GitHub Actions"; until then it skips quietly.
+on:
+  workflow_run:
+    workflows: ["Track Job Applications"]
+    types: [completed]
+  push:
+    branches: [main]
+    paths: ["index.html", ".github/workflows/publish-dashboard.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check that GitHub Pages is set to GitHub Actions
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .build_type 2>/dev/null || true)
+          if [ "$source" = "workflow" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Dashboard not published::Turn on GitHub Pages with Source 'GitHub Actions' (Settings -> Pages) to publish the dashboard."
+          fi
+
+      - name: Checkout repo
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/checkout@v5
+
+      - name: Build the site
+        if: steps.pages.outputs.enabled == 'true'
+        run: |
+          mkdir site
+          cp index.html site/
+          touch site/.nojekyll
+          if git fetch --depth=1 origin data; then
+            git show FETCH_HEAD:applications.csv > site/applications.csv
+          else
+            # No data yet: publish an empty table so the page still loads.
+            echo "company,role,job_id,skills_required,date_applied,platform,status,email_subject,gmail_message_id,status_updated,next_step_details" > site/applications.csv
+          fi
+
+      - name: Configure Pages
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy
+        if: steps.pages.outputs.enabled == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
