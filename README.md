@@ -84,6 +84,20 @@ logs them to `applications.csv`, run daily by GitHub Actions.
 - On days with updates, emails a summary (new applications, next rounds with
   their links, rejections, and overall totals) to `NOTIFY_EMAIL`.
 
+## Dashboard
+
+`index.html` is a dashboard of `applications.csv`: totals, a weekday × week
+matrix of applications per day, applications by company (sortable and
+searchable), rejections with days to reply, and next rounds with their links.
+It reads the CSV on every load, so it is current after each workflow run.
+
+To publish it with GitHub Pages (free for public repos): Settings → Pages →
+Build and deployment → Source "Deploy from a branch", Branch `main`, folder
+`/ (root)`, Save. It is then at
+`https://<your-username>.github.io/<repo-name>/` and redeploys
+automatically each time the workflow commits. The site is public, like the
+repo itself.
+
 ## Troubleshooting
 
 - **Run fails with "Gmail OAuth refresh failed" / `invalid_grant`** — the
