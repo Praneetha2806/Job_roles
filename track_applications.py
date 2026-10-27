@@ -292,6 +292,12 @@ EMAIL_TYPE_TO_STATUS = {
 }
 
 
+def gh_annotation(level: str, title: str, message: str):
+    """Show a message on the GitHub Actions run page (no-op formatting outside CI)."""
+    message = message.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+    print(f"::{level} title={title}::{message}")
+
+
 class LLMUnavailableError(Exception):
     """Gemini could not be reached; the email should be retried next run."""
 
@@ -488,7 +494,7 @@ def main():
 
     gmail = get_gmail_service()
     mailbox = gmail.users().getProfile(userId="me").execute()["emailAddress"]
-    print(f"[debug] scanning mailbox {mailbox}")
+    gh_annotation("notice", "Mailbox", f"Scanning {mailbox}")
     llm = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     run_started = datetime.now(timezone.utc)
@@ -524,7 +530,11 @@ def main():
         except LLMUnavailableError as e:
             # Leave it unprocessed and stop here; last_run_utc is held back
             # below so this email is picked up again on the next run.
-            print(f"[debug] {msg_id}: Gemini unavailable ({e}); will retry next run")
+            gh_annotation(
+                "warning",
+                "Gemini unavailable",
+                f"Stopped before {msg_id}; remaining emails will be retried next run. Error: {e}",
+            )
             llm_failed = True
             break
         processed_ids.add(msg_id)  # mark as seen regardless, to avoid reprocessing
@@ -546,7 +556,11 @@ def main():
     state["processed_ids"] = list(processed_ids)[-2000:]  # cap growth
     save_state(state)
 
-    print(f"Scanned {len(candidate_ids)} candidate emails, recorded {changes} application update(s).")
+    gh_annotation(
+        "notice",
+        "Summary",
+        f"Scanned {len(candidate_ids)} candidate emails, recorded {changes} application update(s).",
+    )
 
 
 if __name__ == "__main__":
