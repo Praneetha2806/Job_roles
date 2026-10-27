@@ -27,6 +27,7 @@ Files this script reads/writes (relative to repo root):
 """
 
 import os
+import re
 import json
 import csv
 import base64
@@ -88,6 +89,9 @@ REJECTION_PHRASES = [
     "unable",
     "not moving forward",
     "not be moving forward",
+    "we have decided",
+    "other candidate",
+    "other candidates",
     "move forward with other candidates",
     "decided to pursue other candidates",
 ]
@@ -115,7 +119,11 @@ def _gmail_or(terms: list[str]) -> str:
     # Gmail matches phrases anywhere, so drop a phrase that already contains a
     # shorter one in the list ("thank you for applying" is covered by "thank you").
     # Fewer terms keeps each search under Gmail's per-minute query-cost quota.
-    terms = [t for t in terms if not any(o != t and o in t for o in terms)]
+    # Whole-word check, since Gmail doesn't treat "candidate" as matching "candidates".
+    terms = [
+        t for t in terms
+        if not any(o != t and re.search(rf"\b{re.escape(o)}\b", t) for o in terms)
+    ]
     return "(" + " OR ".join(f'"{t}"' for t in terms) + ")"
 
 
