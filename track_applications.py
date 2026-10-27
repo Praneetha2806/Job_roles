@@ -4,12 +4,14 @@ track_applications.py
 End-of-day job application tracker.
 
 What it does:
-1. Searches Gmail for likely application-confirmation emails received since the
-   last successful run (tracked in state/last_run.json).
+1. Searches Gmail for likely application-related emails (confirmations,
+   rejections, next-round/assessment invites) received since the last
+   successful run (tracked in state/last_run.json).
 2. Sends each candidate email's subject + sender + body to Gemini, which
-   decides whether it's really an application confirmation and extracts
-   structured fields (company, role, platform).
-3. Appends new, deduplicated rows to applications.csv.
+   classifies it and extracts structured fields (company, role, platform).
+3. Confirmations are appended as new "Applied" rows; rejections and
+   next-round emails update the status of the matching existing row (or add
+   a new row if the original application was never logged).
 4. Updates the "last run" timestamp and the set of processed Gmail message IDs.
 
 Environment variables required (set as GitHub Actions secrets):
@@ -60,23 +62,18 @@ CSV_HEADERS = [
     "status",
     "email_subject",
     "gmail_message_id",
+    "status_updated",
+    "next_step_details",
 ]
 
-# Search is intentionally broad; the LLM does the real filtering afterward.
-# Bare terms (no "subject:" prefix) match anywhere in the email, including the
-# body -- important since many confirmation emails open with "Thank you for
-# applying" in the body text rather than the subject line.
-GMAIL_QUERY_TERMS = (
-    '(subject:"application" OR subject:"applied" OR subject:"application received" '
-    'OR subject:"your application" OR "thank you for applying")'
-)
+STATUS_APPLIED = "Applied"
+STATUS_REJECTED = "Rejected"
+STATUS_NEXT_ROUND = "Next Round"
 
-GEMINI_MODEL = "gemini-flash-latest"
-
-# Phrases that strongly indicate a genuine application-submission confirmation.
-# Most ATS confirmation emails (Greenhouse, Lever, Workday, company careers
-# pages, etc.) open with one of these almost verbatim.
+# Keywords that decide which emails are recorded. Matching is case-insensitive
+# and looks at the subject and body. Edit these lists to tune what gets picked up.
 CONFIRMATION_PHRASES = [
+    "thank you",
     "thank you for applying",
     "thanks for applying",
     "your application has been received",
@@ -84,39 +81,95 @@ CONFIRMATION_PHRASES = [
     "we've received your application",
 ]
 
-EXTRACTION_PROMPT = """You are helping classify and extract data from an email that MIGHT be an \
-automated confirmation that a job application was submitted (e.g. from LinkedIn, Indeed, \
-Greenhouse, Lever, Workday, iCIMS, SmartRecruiters, a company's own careers page, etc.).
+REJECTION_PHRASES = [
+    "unfortunately",
+    "large volume",
+    "unable",
+    "not moving forward",
+    "not be moving forward",
+    "move forward with other candidates",
+    "decided to pursue other candidates",
+]
+
+NEXT_STEP_PHRASES = [
+    "assessment",
+    "survey",
+    "next round",
+    "next step",
+    "coding challenge",
+    "online test",
+    "hackerrank",
+    "codesignal",
+    "interview",
+]
+
+# Words that tie an email to a job application, so generic emails that just
+# say "thank you" or "unfortunately" aren't sent to the LLM.
+JOB_CONTEXT_TERMS = [
+    "application", "applied", "applying", "position", "candidacy", "candidate",
+]
+
+
+def _gmail_or(terms: list[str]) -> str:
+    return "(" + " OR ".join(f'"{t}"' for t in terms) + ")"
+
+
+# Either an application-ish subject line, or a keyword plus job context anywhere
+# in the email. Bare terms (no "subject:" prefix) also match the body. The LLM
+# does the precise classification afterward.
+GMAIL_QUERY_TERMS = (
+    '(subject:"application" OR subject:"applied" OR subject:"your application" OR ('
+    + _gmail_or(CONFIRMATION_PHRASES + REJECTION_PHRASES + NEXT_STEP_PHRASES)
+    + " "
+    + _gmail_or(JOB_CONTEXT_TERMS)
+    + "))"
+)
+
+GEMINI_MODEL = "gemini-flash-latest"
+
+EXTRACTION_PROMPT = """You are helping track the status of job applications from emails \
+(e.g. from LinkedIn, Indeed, Greenhouse, Lever, Workday, iCIMS, SmartRecruiters, Ashby, \
+a company's own careers page, etc.).
 
 Email metadata:
 From: {sender}
 Subject: {subject}
-Snippet: {snippet}
+Body: {snippet}
 
-Decide if this is genuinely an application-submission confirmation (NOT a rejection, \
-NOT an interview invite, NOT a newsletter, NOT a job recommendation digest).
+Keyword matches found by a simple text scan (hints only; use your judgment):
+- confirmation keywords: {confirmation_hits}
+- rejection keywords: {rejection_hits}
+- next-step keywords: {next_step_hits}
 
-Strong signal: emails that open with phrasing like "Thank you for applying", \
-"Thanks for applying", or "We have received your application" are almost always \
-genuine submission confirmations, even if the rest of the email is short or generic. \
-Treat that opening phrasing as strong evidence of is_application_confirmation=true, \
-unless the email clearly contradicts it (e.g. it's actually a rejection that happens \
-to reference a past application, or a promotional/job-alert email using similar wording \
-without confirming a specific submission).
+Classify the email as exactly one email_type:
+- "application_confirmation": confirms a job application was submitted/received \
+(typically "Thank you for applying", "We have received your application").
+- "rejection": the company is not moving forward with the candidate (typically \
+"Unfortunately...", "due to the large volume of applications", "we are unable to...", \
+"not moving forward", "decided to pursue other candidates").
+- "next_step": the candidate is being taken forward, e.g. an online assessment, \
+coding challenge, survey/questionnaire to complete, or an interview invitation/scheduling.
+- "other": anything else (newsletters, job-alert digests, recommendations, marketing, \
+account/security emails, or emails not about a specific application by the candidate).
 
-Some confirmation emails include a requisition/job ID (e.g. "Job ID: 12345", \
-"Req #R-00123") and/or a list of required skills or qualifications pulled from the \
-posting. Extract these if present in the subject or snippet; otherwise use null. \
-Do not guess or invent a job ID or skills that are not actually present in the text.
+Keywords are only hints: "thank you" also appears in rejections, and "unable" or \
+"survey" can appear in unrelated emails. Decide based on the overall meaning.
+
+Extract the company and role the email is about. For "next_step", put the action \
+required and any assessment/survey/scheduling link in next_step_details (copy links \
+exactly as they appear). Some emails include a requisition/job ID (e.g. "Job ID: 12345", \
+"Req #R-00123") and/or required skills; extract them if present, otherwise use null. \
+Do not guess or invent values that are not actually present in the text.
 
 Respond with ONLY a JSON object, no other text, in this exact shape:
 {{
-  "is_application_confirmation": true or false,
+  "email_type": "application_confirmation" | "rejection" | "next_step" | "other",
   "company": "string or null",
   "role": "string or null",
   "platform": "string or null (e.g. LinkedIn, Indeed, Greenhouse, Workday, Company Careers Page)",
   "job_id": "string or null",
-  "skills_required": "comma-separated string or null"
+  "skills_required": "comma-separated string or null",
+  "next_step_details": "string or null"
 }}
 """
 
@@ -220,13 +273,23 @@ def fetch_message_summary(service, msg_id: str):
 # Gemini extraction
 # ---------------------------------------------------------------------------
 
-def contains_confirmation_phrase(email: dict) -> bool:
-    """Quick code-level check for known confirmation phrasing, used only for
-    debug visibility / as a signal -- the actual accept/reject decision still
-    comes from the LLM, which also checks for contradicting context (e.g. a
-    rejection email that happens to reference "your application")."""
+def keyword_hits(email: dict) -> dict[str, list[str]]:
+    """Code-level scan for the configured keywords. Passed to the LLM as hints
+    and logged for debugging; the LLM makes the final call since keywords like
+    "thank you" also show up in rejections."""
     haystack = f"{email['subject']} {email['snippet']}".lower()
-    return any(phrase in haystack for phrase in CONFIRMATION_PHRASES)
+    return {
+        "confirmation": [p for p in CONFIRMATION_PHRASES if p in haystack],
+        "rejection": [p for p in REJECTION_PHRASES if p in haystack],
+        "next_step": [p for p in NEXT_STEP_PHRASES if p in haystack],
+    }
+
+
+EMAIL_TYPE_TO_STATUS = {
+    "application_confirmation": STATUS_APPLIED,
+    "rejection": STATUS_REJECTED,
+    "next_step": STATUS_NEXT_ROUND,
+}
 
 
 class LLMUnavailableError(Exception):
@@ -261,13 +324,19 @@ def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
 
 
 def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
+    hits = keyword_hits(email)
     prompt = EXTRACTION_PROMPT.format(
-        sender=email["sender"], subject=email["subject"], snippet=email["snippet"]
+        sender=email["sender"],
+        subject=email["subject"],
+        snippet=email["snippet"],
+        confirmation_hits=", ".join(hits["confirmation"]) or "none",
+        rejection_hits=", ".join(hits["rejection"]) or "none",
+        next_step_hits=", ".join(hits["next_step"]) or "none",
     )
     response = generate_with_retry(client, prompt)
     text = (response.text or "").strip()
     print(f"  [debug] subject={email['subject']!r}")
-    print(f"  [debug] phrase_match={contains_confirmation_phrase(email)}")
+    print(f"  [debug] keyword_hits={hits}")
     print(f"  [debug] gemini raw response: {text!r}")
 
     try:
@@ -276,8 +345,8 @@ def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
         print(f"  [debug] JSON parse failed: {e}")
         return None
 
-    if not data.get("is_application_confirmation"):
-        print(f"  [debug] Gemini classified this as NOT an application confirmation")
+    if data.get("email_type") not in EMAIL_TYPE_TO_STATUS:
+        print(f"  [debug] Gemini classified this as {data.get('email_type')!r}; ignoring")
         return None
 
     return data
@@ -298,37 +367,85 @@ def save_state(state: dict):
     STATE_PATH.write_text(json.dumps(state, indent=2))
 
 
-def ensure_csv():
+def load_rows() -> list[dict]:
     if not CSV_PATH.exists():
-        with CSV_PATH.open("w", newline="") as f:
-            csv.writer(f).writerow(CSV_HEADERS)
-
-
-def append_row(row: dict):
-    with CSV_PATH.open("a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
-        writer.writerow(row)
-
-
-def sort_csv_by_company():
-    """Re-sort applications.csv so rows are grouped by company (then by date_applied)."""
+        return []
     with CSV_PATH.open(newline="") as f:
-        rows = list(csv.DictReader(f))
+        # Older CSVs lack the newer columns; fill them in as blank.
+        return [{h: row.get(h) or "" for h in CSV_HEADERS} for row in csv.DictReader(f)]
 
+
+def save_rows(rows: list[dict]):
+    """Write applications.csv grouped by company (then by date_applied)."""
     rows.sort(key=lambda r: (r["company"].lower(), r["date_applied"]))
-
     with CSV_PATH.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
         writer.writeheader()
         writer.writerows(rows)
 
 
+def _norm(text: str | None) -> str:
+    return " ".join((text or "").lower().split())
+
+
+def _loosely_equal(a: str, b: str) -> bool:
+    # "TransUnion" vs "TransUnion LLC", "Data Analyst" vs "Data Analyst Intern".
+    return bool(a and b) and (a in b or b in a)
+
+
+def find_matching_row(rows: list[dict], company: str | None, role: str | None) -> dict | None:
+    """Find the logged application a rejection/next-step email refers to:
+    same company, preferring a matching role, most recently applied."""
+    company_n, role_n = _norm(company), _norm(role)
+    same_company = [r for r in rows if _loosely_equal(_norm(r["company"]), company_n)]
+    if not same_company:
+        return None
+    same_role = [r for r in same_company if _loosely_equal(_norm(r["role"]), role_n)]
+    candidates = same_role or same_company
+    return max(candidates, key=lambda r: r["date_applied"])
+
+
+def record_email(rows: list[dict], email: dict, extracted: dict) -> str:
+    """Apply one classified email to rows. Returns a short description."""
+    status = EMAIL_TYPE_TO_STATUS[extracted["email_type"]]
+    email_date = email["internal_date"].strftime("%Y-%m-%d")
+
+    if status != STATUS_APPLIED:
+        row = find_matching_row(rows, extracted.get("company"), extracted.get("role"))
+        if row is not None:
+            row["status"] = status
+            row["status_updated"] = email_date
+            row["next_step_details"] = extracted.get("next_step_details") or ""
+            # Fill in anything the confirmation email didn't have.
+            for field in ("role", "job_id", "skills_required", "platform"):
+                if not row[field] and extracted.get(field):
+                    row[field] = extracted[field]
+            return f"updated {row['company']} / {row['role'] or '?'} -> {status}"
+
+    rows.append(
+        {
+            "company": extracted.get("company") or "",
+            "role": extracted.get("role") or "",
+            "job_id": extracted.get("job_id") or "",
+            "skills_required": extracted.get("skills_required") or "",
+            # For a status email with no logged application, the email date is
+            # the best available stand-in for when it was applied.
+            "date_applied": email_date,
+            "platform": extracted.get("platform") or "",
+            "status": status,
+            "email_subject": email["subject"],
+            "gmail_message_id": email["id"],
+            "status_updated": email_date,
+            "next_step_details": extracted.get("next_step_details") or "",
+        }
+    )
+    return f"added {extracted.get('company') or '?'} / {extracted.get('role') or '?'} as {status}"
+
+
 def write_grouped_summary():
     """Write applications_by_company.md: one section per company, listing each
     role/job_id/skills/status/date, for a quick human-readable grouped view."""
-    with CSV_PATH.open(newline="") as f:
-        rows = list(csv.DictReader(f))
-
+    rows = load_rows()
     by_company: dict[str, list[dict]] = {}
     for row in rows:
         by_company.setdefault(row["company"] or "Unknown", []).append(row)
@@ -340,7 +457,13 @@ def write_grouped_summary():
         for r in entries:
             job_id_part = f" — Job ID: {r['job_id']}" if r["job_id"] else ""
             lines.append(f"- **{r['role'] or 'Unknown role'}**{job_id_part}")
-            lines.append(f"  - Applied: {r['date_applied']} via {r['platform']} — Status: {r['status']}")
+            status = r["status"]
+            if r["status_updated"] and status != STATUS_APPLIED:
+                status += f" (updated {r['status_updated']})"
+            via = f" via {r['platform']}" if r["platform"] else ""
+            lines.append(f"  - Applied: {r['date_applied']}{via} — Status: {status}")
+            if r["next_step_details"]:
+                lines.append(f"  - Next step: {r['next_step_details']}")
             if r["skills_required"]:
                 lines.append(f"  - Skills: {r['skills_required']}")
         lines.append("")
@@ -363,8 +486,6 @@ def main():
         # first run: look back 1 day
         since = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    ensure_csv()
-
     gmail = get_gmail_service()
     mailbox = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     print(f"[debug] scanning mailbox {mailbox}")
@@ -372,10 +493,11 @@ def main():
 
     run_started = datetime.now(timezone.utc)
     candidate_ids = search_candidate_messages(gmail, since)
-    new_rows = 0
+    changes = 0
     llm_failed = False
     print(f"[debug] since={since.isoformat()}")
 
+    emails = []
     for msg_id in candidate_ids:
         if msg_id in processed_ids:
             print(f"[debug] {msg_id}: skipped, already in processed_ids")
@@ -388,7 +510,15 @@ def main():
                 f"<= since={since.isoformat()}"
             )
             continue
+        emails.append(email)
 
+    # Oldest first, so a confirmation is logged before a later rejection or
+    # next-round email for the same application arrives in the same run.
+    emails.sort(key=lambda e: e["internal_date"])
+    rows = load_rows()
+
+    for email in emails:
+        msg_id = email["id"]
         try:
             extracted = extract_with_llm(llm, email)
         except LLMUnavailableError as e:
@@ -402,24 +532,12 @@ def main():
         if extracted is None:
             continue
 
-        append_row(
-            {
-                "company": extracted.get("company") or "",
-                "role": extracted.get("role") or "",
-                "job_id": extracted.get("job_id") or "",
-                "skills_required": extracted.get("skills_required") or "",
-                "date_applied": email["internal_date"].strftime("%Y-%m-%d"),
-                "platform": extracted.get("platform") or "",
-                "status": "Applied",
-                "email_subject": email["subject"],
-                "gmail_message_id": msg_id,
-            }
-        )
-        new_rows += 1
+        print(f"[debug] {msg_id}: {record_email(rows, email, extracted)}")
+        changes += 1
 
-    if new_rows:
-        sort_csv_by_company()
-        write_grouped_summary()
+    # Always rewrite, so older CSVs pick up the newer columns.
+    save_rows(rows)
+    write_grouped_summary()
 
     # On a Gemini outage keep the old window so skipped emails are retried;
     # processed_ids prevents the ones already handled from being re-logged.
@@ -428,7 +546,7 @@ def main():
     state["processed_ids"] = list(processed_ids)[-2000:]  # cap growth
     save_state(state)
 
-    print(f"Scanned {len(candidate_ids)} candidate emails, logged {new_rows} new application(s).")
+    print(f"Scanned {len(candidate_ids)} candidate emails, recorded {changes} application update(s).")
 
 
 if __name__ == "__main__":

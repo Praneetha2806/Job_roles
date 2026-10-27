@@ -39,18 +39,33 @@ logs them to `applications.csv`, run daily by GitHub Actions.
 
 ## How it works
 
-- Searches Gmail for emails since the last run whose subject looks
-  application-related (broad net).
+- Searches Gmail for emails since the last run that look application-related:
+  an application-ish subject, or one of the keywords below together with a
+  job word (application, applied, applying, position, candidate, candidacy).
 - Sends each candidate's subject/sender/full email body to an LLM (Google
-  Gemini `gemini-2.5-flash`, free tier), which decides if it's a real
-  submission confirmation (filters out rejections, interview invites,
-  job-alert digests) and extracts `company`, `role`, `job_id`,
-  `skills_required`, `platform`.
-- Appends new rows to `applications.csv`, dedupes by Gmail message ID via
-  `state/last_run.json`.
+  Gemini, free tier), with the keyword matches as hints. It classifies the
+  email and extracts `company`, `role`, `job_id`, `skills_required`,
+  `platform` and, for next-round emails, `next_step_details` (assessment,
+  survey or scheduling link).
+- Records it in `applications.csv`:
+
+  | Email type | Example keywords | What happens |
+  |---|---|---|
+  | Confirmation | thank you, thank you for applying | New row, status `Applied` |
+  | Rejection | unfortunately, large volume, unable, not moving forward | Matching row → `Rejected` |
+  | Next step | assessment, survey, next round, interview | Matching row → `Next Round`, link saved |
+
+  Rejection/next-step emails are matched to an existing row by company
+  (preferring the same role, then the most recent application). If no
+  application was logged for that company, a new row is added with that
+  status. `status_updated` records the date of the latest status email.
+- The keyword lists are at the top of `track_applications.py`
+  (`CONFIRMATION_PHRASES`, `REJECTION_PHRASES`, `NEXT_STEP_PHRASES`) —
+  edit them to tune what gets picked up.
+- Dedupes by Gmail message ID via `state/last_run.json`.
 - Job ID and skills are only filled in when the email actually contains them
   — the model is instructed not to guess, so these are often blank.
-- After each run with new rows, `applications.csv` is re-sorted so entries
+- After each run, `applications.csv` is re-sorted so entries
   are grouped by company (then by date), and `applications_by_company.md` is
   regenerated as a readable, grouped-by-company summary.
 - Commits the updated CSV and summary back to the repo each run.
@@ -70,8 +85,5 @@ logs them to `applications.csv`, run daily by GitHub Actions.
 
 ## Extending
 
-- Add a `status` update step later (e.g. detect rejection/interview emails
-  and update the matching row) if you want the CSV to track full lifecycle,
-  not just submissions.
 - Point a Google Sheet or a small dashboard at the CSV via the raw GitHub URL
   if you want a live view instead of opening the file.
