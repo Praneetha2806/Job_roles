@@ -50,8 +50,11 @@ logs them to `applications.csv`, run daily by GitHub Actions.
 - Searches Gmail for emails since the last run that look application-related:
   an application-ish subject, or one of the keywords below together with a
   job word (application, applied, applying, position, candidate, candidacy).
+  Gmail's Promotions and Social tabs and LinkedIn/Indeed job-alert digests
+  are skipped to keep the volume within Gemini's free tier.
 - Sends each candidate's subject/sender/full email body to an LLM (Google
-  Gemini, free tier), with the keyword matches as hints. It classifies the
+  Gemini, free tier; falls back to a lighter model when the main one is
+  overloaded), with the keyword matches as hints. It classifies the
   email and extracts `company`, `role`, `job_id`, `skills_required`,
   `platform` and, for next-round emails, `next_step_details` (assessment,
   survey or scheduling link).
