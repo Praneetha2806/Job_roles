@@ -9,7 +9,8 @@ and the Gemini free tier, with no server to maintain.
 
 Each run:
 
-- updates `applications.csv` and `applications_by_company.md` in this repo,
+- updates `applications.csv` and `applications_by_company.md` on the repo's
+  `data` branch,
 - emails you a summary on days with updates, and a separate "Action
   needed" reminder for each application that moves to a next round
   (optional), and
@@ -22,16 +23,17 @@ About 30 minutes, once. You need a GitHub account and the Gmail account your
 job emails go to.
 
 1. **Copy the repo.** On this repo's GitHub page, click **Use this template →
-   Create a new repository** (or **Fork**). Choose a name and whether it is
-   public or private (see Privacy below).
+   Create a new repository** (leave "Include all branches" unticked), or
+   **Fork** (leave "Copy the main branch only" ticked). Choose a name and
+   whether it is public or private (see Privacy below). Your copy has only
+   the code; the original owner's applications live on their `data` branch
+   and are not copied.
 2. **Set up Google and the secrets:** follow [Setup](#setup) steps 1–5
    below.
-3. **Start fresh.** In your copy, go to **Actions**, enable workflows if asked,
-   then **Track Job Applications → Run workflow** and fill in:
-   - **reset:** `RESET` (removes the example applications that came with the
-     copy)
-   - **start_date:** the first day to track, e.g. two weeks ago, as
-     `YYYY-MM-DD`
+3. **First run.** In your copy, go to **Actions**, enable workflows if asked,
+   then **Track Job Applications → Run workflow**, set **start_date** to the
+   first day to track (e.g. two weeks ago, as `YYYY-MM-DD`), and run it. It
+   creates your own `data` branch.
 4. **Turn on the dashboard:** see [Dashboard](#dashboard).
 5. **Optional:** change the nightly time for your time zone (see
    [Setup](#setup) step 6), and edit the keyword lists for the wording your
@@ -39,25 +41,33 @@ job emails go to.
 
 From then on it runs every night by itself.
 
-> **Privacy:** in a public repo, anyone can see `applications.csv` and the
+> **Privacy:** in a public repo, anyone can open the `data` branch and the
 > dashboard, so the companies and roles you applied to are visible. To keep
 > them private, make the repo private (Settings → General → Danger Zone →
 > Change visibility); the tracker works the same. GitHub Pages on a private
 > repo needs a paid GitHub plan; without it, open `applications_by_company.md`
-> on GitHub instead.
+> on the `data` branch instead.
 
 ## What's in the repo
 
 | File | What it is |
 |---|---|
 | `track_applications.py` | The tracker: searches Gmail, classifies emails with Gemini, updates the CSV, sends the summary email |
-| `.github/workflows/track-applications.yml` | Runs the tracker nightly and commits the results |
-| `applications.csv` | Every tracked application, one row each |
-| `applications_by_company.md` | The same data grouped by company, readable on GitHub |
-| `index.html` | The dashboard, published with GitHub Pages |
-| `state/last_run.json` | Where the next run starts, and which emails were already processed |
+| `.github/workflows/track-applications.yml` | Runs the tracker nightly and commits the results to the `data` branch |
+| `.github/workflows/publish-dashboard.yml` | Publishes the dashboard to GitHub Pages after every run |
+| `index.html` | The dashboard |
 | `get_refresh_token.py` | One-time helper you run on your own computer to create the Gmail token |
 | `requirements.txt` | Python packages the workflow installs |
+| `LICENSE` | MIT license: anyone may use, copy and change this code |
+
+The data lives on a separate **`data` branch**, so copies of the code start
+empty and every nightly run is a commit you can look back through:
+
+| File on `data` | What it is |
+|---|---|
+| `applications.csv` | Every tracked application, one row each |
+| `applications_by_company.md` | The same data grouped by company, readable on GitHub |
+| `state/last_run.json` | Where the next run starts, and which emails were already processed |
 
 ## How it works
 
@@ -101,9 +111,8 @@ From then on it runs every night by itself.
 Nothing to do on your side. The next nightly run finds the reply, Gemini
 reads it, and the tracker finds that application's existing row in
 `applications.csv` (same company, preferring the same role) and changes its
-status, instead of adding a new row. The run commits the updated CSV, and
-the dashboard shows the change the next time it is opened, after GitHub Pages
-redeploys (a minute or two). Replies are picked up at the nightly run, or
+status, instead of adding a new row. The run commits the updated CSV to the
+`data` branch, and the dashboard is republished a minute or two later. Replies are picked up at the nightly run, or
 sooner if you run the workflow by hand.
 
 To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES` and
@@ -132,11 +141,13 @@ To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES` and
 - rejections so far, with days from applying to the rejection
 - next rounds, with the link from each email
 
-It reads `applications.csv` each time it is opened, so it is up to date
-after every run. To publish it: Settings → Pages → Build and deployment →
-Source **Deploy from a branch**, Branch **main**, folder **/ (root)** →
-Save. After a minute or two it is at
-`https://<your-username>.github.io/<repo-name>/`.
+The **Publish dashboard** workflow republishes it after every tracker run,
+with the latest `applications.csv` from the `data` branch. To turn it on:
+Settings → Pages → Build and deployment → Source **GitHub Actions**. Then
+**Actions → Publish dashboard → Run workflow** once (later runs are
+automatic). After a minute or two it is at
+`https://<your-username>.github.io/<repo-name>/`. Until Pages is on, the
+workflow skips publishing and leaves a note on its run.
 
 ## Setup
 
@@ -223,7 +234,11 @@ to the first day you want tracked; otherwise it looks back 7 days.
   (e.g. `2026-10-01`). Emails already processed are skipped, so nothing is
   counted twice.
 - **Start over:** **Run workflow** with **reset** set to `RESET`. This deletes
-  every tracked application; the old data stays in the repo's git history.
+  every tracked application; the old data stays in the `data` branch's
+  history.
+- **See how your data changed:** the `data` branch's commit history has one
+  commit per run (`Log applications for <date>`), so you can see what changed
+  on any day.
 - **Gemini's free tier allows about 500 requests a day.** A normal day is well
   under that. When catching up on a long period, a run may stop at the limit;
   the next run continues where it left off.
@@ -240,8 +255,8 @@ to the first day you want tracked; otherwise it looks back 7 days.
 | Warning "Email not sent" or "Reminder not sent" | Check the `GMAIL_APP_PASSWORD` and `NOTIFY_EMAIL` secrets. A new App Password is needed if 2-Step Verification was turned off and on again. |
 | Workflow shows "disabled" | GitHub turns off scheduled workflows after 60 days without repo activity. **Actions → Track Job Applications → Enable workflow**. |
 | Run fails with "start date … is not a date like 2026-10-01" | Type the start date as `YYYY-MM-DD`. |
-| The dashboard or CSV shows someone else's applications | Your copy still has the example data. Run the workflow once with **reset** set to `RESET`. |
-| Dashboard shows "Couldn't load your applications" | GitHub Pages is off or still deploying. Check Settings → Pages, wait a minute, and refresh. |
+| The dashboard or CSV shows someone else's applications | Your copy included the original `data` branch. Run the workflow once with **reset** set to `RESET`. |
+| Dashboard shows "Couldn't load your applications" or the Pages address shows 404 | Check that Settings → Pages → Source is **GitHub Actions**, then run **Actions → Publish dashboard → Run workflow**. |
 
 ## Ideas for later
 
@@ -249,3 +264,7 @@ to the first day you want tracked; otherwise it looks back 7 days.
   the same application.
 - Add an "Interview" status separate from assessments and surveys.
 - Add filters to the dashboard (date range, platform).
+
+## License
+
+[MIT](LICENSE): free to use, copy, change and share, with no warranty.

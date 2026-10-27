@@ -28,8 +28,10 @@ Environment variables required (set as GitHub Actions secrets):
 - GMAIL_APP_PASSWORD, NOTIFY_EMAIL (optional) -- send the daily summary from
                                the tracked mailbox to NOTIFY_EMAIL
 
-Files this script reads/writes (relative to repo root):
+Files this script reads/writes, in TRACKER_DATA_DIR (default: next to this
+script; the workflow uses a checkout of the `data` branch):
 - applications.csv           the running log
+- applications_by_company.md the same, grouped by company
 - state/last_run.json        {"last_run_utc": "...", "processed_ids": [...]}
 """
 
@@ -61,8 +63,12 @@ from google.genai import types as genai_types
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parent
-CSV_PATH = REPO_ROOT / "applications.csv"
-STATE_PATH = REPO_ROOT / "state" / "last_run.json"
+# The workflow checks out the `data` branch into its own folder and points
+# TRACKER_DATA_DIR at it, so the data never lands on the code branch.
+DATA_DIR = Path(os.environ.get("TRACKER_DATA_DIR") or REPO_ROOT).resolve()
+CSV_PATH = DATA_DIR / "applications.csv"
+STATE_PATH = DATA_DIR / "state" / "last_run.json"
+SUMMARY_PATH = DATA_DIR / "applications_by_company.md"
 
 CSV_HEADERS = [
     "company",
@@ -437,6 +443,7 @@ def load_rows() -> list[dict]:
 
 def save_rows(rows: list[dict]):
     """Write applications.csv grouped by company (then by date_applied)."""
+    CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
     rows.sort(key=lambda r: (r["company"].lower(), r["date_applied"]))
     with CSV_PATH.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
@@ -527,7 +534,7 @@ def write_grouped_summary():
                 lines.append(f"  - Skills: {r['skills_required']}")
         lines.append("")
 
-    (REPO_ROOT / "applications_by_company.md").write_text("\n".join(lines))
+    SUMMARY_PATH.write_text("\n".join(lines))
 
 
 # ---------------------------------------------------------------------------
