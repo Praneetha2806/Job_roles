@@ -6,10 +6,11 @@ asks you to sign in to Gmail, and prints a refresh token to store in the
 GMAIL_REFRESH_TOKEN repo secret.
 
 Usage:
-    pip install google-auth-oauthlib
+    pip install google-auth-oauthlib google-api-python-client
     python get_refresh_token.py <CLIENT_ID> <CLIENT_SECRET>
 
-Your OAuth client must be of type "Desktop app". Set the consent screen to
+Sign in with the Gmail account you want tracked; the token only grants
+access to that mailbox. Your OAuth client must be of type "Desktop app". Set the consent screen to
 "In production" first (Google Auth Platform -> Audience -> Publish app);
 while it is in "Testing", Google expires refresh tokens after 7 days and the
 daily workflow starts failing.
@@ -18,6 +19,7 @@ daily workflow starts failing.
 import sys
 
 from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
@@ -41,6 +43,8 @@ def main():
     )
     # prompt="consent" forces Google to issue a fresh refresh token.
     creds = flow.run_local_server(port=0, access_type="offline", prompt="consent")
+    profile = build("gmail", "v1", credentials=creds).users().getProfile(userId="me").execute()
+    print(f"\nAuthorized mailbox: {profile['emailAddress']}")
     print("\nGMAIL_REFRESH_TOKEN:\n")
     print(creds.refresh_token)
 

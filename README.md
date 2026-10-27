@@ -15,9 +15,11 @@ logs them to `applications.csv`, run daily by GitHub Actions.
    `https://www.googleapis.com/auth/gmail.readonly` (add it and
    re-consent once if it doesn't). Otherwise:
    - Create an OAuth client in Google Cloud Console (Desktop app type).
-   - Run `pip install google-auth-oauthlib` then
-     `python get_refresh_token.py <CLIENT_ID> <CLIENT_SECRET>` locally to
-     authorize and print a refresh token.
+   - Run `pip install google-auth-oauthlib google-api-python-client` then
+     `python get_refresh_token.py <CLIENT_ID> <CLIENT_SECRET>` locally,
+     sign in with the Gmail account to track, and copy the printed refresh
+     token. To switch accounts later, just repeat this with the other
+     account and update the secret.
    - **Publish the OAuth consent screen** (Google Auth Platform → Audience →
      "Publish app", status "In production"). While it is in "Testing",
      Google expires refresh tokens after 7 days and the workflow fails with

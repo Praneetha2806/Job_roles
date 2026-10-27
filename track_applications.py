@@ -366,6 +366,8 @@ def main():
     ensure_csv()
 
     gmail = get_gmail_service()
+    mailbox = gmail.users().getProfile(userId="me").execute()["emailAddress"]
+    print(f"[debug] scanning mailbox {mailbox}")
     llm = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     run_started = datetime.now(timezone.utc)
