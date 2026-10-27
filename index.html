@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Job Application Tracker</title>
 <!--
-  Dashboard for applications.csv, published with GitHub Pages.
-  It reads applications.csv from this repo on every load, so it
-  updates whenever the Track Job Applications workflow commits new data.
+  Dashboard for applications.csv, published with GitHub Pages by the
+  Publish dashboard workflow, which copies in the latest applications.csv from
+  the data branch after every tracker run.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Public+Sans:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
-  /* Layout: one column of cards; tiles and the two lists wrap to columns when there is room. */
+  /* Layout: summary first, then what needs action, then how the search is going, then the full lists. */
   :root {
     --bg: #f6f7f9; --panel: #ffffff; --fg: #1d2330; --muted: #5d6677; --line: #dfe3ea;
-    --accent: #2f5fd0; --ok: #1f7a4d; --bad: #b4342b; --grid: #eceff4;
+    --accent: #2f5fd0; --accent-2: #d08a1f; --ok: #1f7a4d; --bad: #b4342b; --warn: #a86400; --grid: #eceff4;
     --font-display: "Fraunces", Georgia, serif;
     --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     --radius: 10px;
@@ -25,37 +25,55 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #12151b; --panel: #1a1f28; --fg: #e7eaf0; --muted: #9aa3b4; --line: #2c3340;
-      --accent: #7aa2ff; --ok: #5ccf94; --bad: #ff7b70; --grid: #232a35; color-scheme: dark;
+      --accent: #7aa2ff; --accent-2: #f0b45a; --ok: #5ccf94; --bad: #ff7b70; --warn: #f0b45a; --grid: #232a35; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #12151b; --panel: #1a1f28; --fg: #e7eaf0; --muted: #9aa3b4; --line: #2c3340;
-    --accent: #7aa2ff; --ok: #5ccf94; --bad: #ff7b70; --grid: #232a35; color-scheme: dark;
+    --accent: #7aa2ff; --accent-2: #f0b45a; --ok: #5ccf94; --bad: #ff7b70; --warn: #f0b45a; --grid: #232a35; color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
   .page { max-width: 1200px; margin-inline: auto; padding-block: 32px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 24px; }
   h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.15; margin: 0; text-wrap: balance; }
   h2 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+  .section-title { font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 0 -12px; }
   .lede { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
   .lede b { color: var(--fg); font-weight: 600; }
   .asof { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: 12px; }
   .tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
-  .tile { padding: 14px 18px; display: grid; gap: 2px; }
+  .tile { padding: 14px 18px; display: grid; gap: 2px; align-content: start; }
   .tile-label, .tile-note, .note { font-size: .8rem; color: var(--muted); }
   .tile-value { font-family: var(--font-display); font-size: 2rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
-  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
   .card { padding: 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
   .note { margin: 0; }
   .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: 12px; }
-  .matrix { position: relative; min-height: 120px; }
+  .chart { position: relative; min-height: 120px; }
   .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgb(0 0 0 / .15); padding: 6px 10px; font-size: .8rem; white-space: nowrap; z-index: 2; }
   .tip .d { color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .8rem; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--swatch); }
+  .funnel { display: grid; gap: 10px; }
+  .funnel-row { display: grid; grid-template-columns: minmax(6.5rem, 8rem) 1fr minmax(5.5rem, auto); gap: 12px; align-items: center; }
+  .funnel-label { font-size: .85rem; }
+  .funnel-bar { position: relative; height: 28px; background: var(--grid); border-radius: 6px; overflow: hidden; }
+  .funnel-fill { height: 100%; background: var(--accent); border-radius: 6px; min-width: 2px; }
+  .funnel-text { font-size: .85rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .nowrap { white-space: nowrap; }
+  .bar-cell { display: flex; align-items: center; gap: 8px; min-width: 7rem; }
+  .bar-track { flex: 1; height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .75rem; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .85rem; font-variant-numeric: tabular-nums; }
+  .chip b { font-weight: 600; }
+  .empty { color: var(--muted); font-size: .85rem; margin: 0; }
   input[type=search] { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); width: 100%; max-width: 20rem; }
   .scroll { max-height: 26rem; overflow: auto; }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  th { position: sticky; top: 0; background: var(--panel); text-align: left; font-size: .78rem; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); padding: 6px 8px; white-space: nowrap; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: left; font-size: .78rem; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); padding: 6px 8px; white-space: nowrap; z-index: 1; }
   td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
   .num { text-align: right; }
   .zero { color: var(--muted); }
@@ -65,7 +83,7 @@
   th[aria-sort=descending] button::after { content: " ↓"; }
   a { color: var(--accent); }
   .error { color: var(--bad); }
-  @media (max-width: 40rem) { .opt { display: none; } }
+  @media (max-width: 40rem) { .opt { display: none; } .funnel-row { grid-template-columns: 6rem 1fr auto; gap: 8px; } }
 </style>
 </head>
 <body>
@@ -77,18 +95,92 @@
   </header>
 
   <section class="tiles" aria-label="Totals">
-    <div class="tile"><span class="tile-label">Applications</span><span class="tile-value" id="t-total">—</span><span class="tile-note">All tracked so far</span></div>
-    <div class="tile"><span class="tile-label">Waiting to hear</span><span class="tile-value" id="t-waiting">—</span><span class="tile-note">Status still Applied</span></div>
+    <div class="tile"><span class="tile-label">Applications</span><span class="tile-value" id="t-total">—</span><span class="tile-note" id="t-total-note">All tracked so far</span></div>
+    <div class="tile"><span class="tile-label">Reply rate</span><span class="tile-value" id="t-reply">—</span><span class="tile-note" id="t-reply-note">Got any reply</span></div>
     <div class="tile"><span class="tile-label">Next round</span><span class="tile-value ok" id="t-next">—</span><span class="tile-note">Assessments, surveys, interviews</span></div>
+    <div class="tile"><span class="tile-label">Offers</span><span class="tile-value ok" id="t-offers">—</span><span class="tile-note">Total so far</span></div>
     <div class="tile"><span class="tile-label">Rejections</span><span class="tile-value bad" id="t-rejected">—</span><span class="tile-note">Total so far</span></div>
-    <div class="tile"><span class="tile-label">Response rate</span><span class="tile-value" id="t-response">—</span><span class="tile-note">Rejected or next round, of all</span></div>
+    <div class="tile"><span class="tile-label">No reply after 2 weeks</span><span class="tile-value warn" id="t-stale">—</span><span class="tile-note">Applied 15+ days ago</span></div>
+  </section>
+
+  <h2 class="section-title">Needs your attention</h2>
+
+  <section class="card" id="action">
+    <h2>Next rounds to do</h2>
+    <p class="note">Open next rounds and offers, soonest deadline first. Due dates come from the email when it states one.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Application</th><th>Type</th><th>Due</th><th>Next step</th><th class="opt">Received</th></tr></thead>
+        <tbody id="action-body"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="action-empty" hidden>Nothing open right now.</p>
+  </section>
+
+  <h2 class="section-title">How your search is going</h2>
+
+  <div class="pair">
+    <section class="card" id="funnel-card">
+      <h2>From application to offer</h2>
+      <p class="note">How many applications reached each stage. A reply is any rejection, next round or offer.</p>
+      <div class="funnel" id="funnel"></div>
+      <p class="note" id="reply-speed"></p>
+    </section>
+    <section class="card" id="aging-card">
+      <h2>Waiting for a reply</h2>
+      <p class="note">Applications with no reply yet, by how long ago you applied. Many companies never reply; the 30+ group is likely closed.</p>
+      <div class="chart" id="aging"></div>
+    </section>
+  </div>
+
+  <section class="card" id="weekly">
+    <h2>Applications and replies per week</h2>
+    <p class="note">Applications you sent and replies you received each week (starting Monday), up to the last 12 weeks.</p>
+    <div class="legend"><span style="--swatch: var(--accent)">Applications sent</span><span style="--swatch: var(--accent-2)">Replies received</span></div>
+    <div class="chart" id="weekly-chart"></div>
   </section>
 
   <section class="card" id="per-day">
     <h2>Applications per day</h2>
-    <p class="note">Each square is one day and shows how many applications you sent. Rows are weekdays, columns are weeks starting Monday, and the bottom row is the week's total. Up to the last 12 weeks.</p>
-    <div class="matrix" id="matrix"></div>
+    <p class="note">Each square is one day and shows how many applications you sent. Rows are weekdays, columns are weeks starting Monday, and the bottom row is the week's total.</p>
+    <div class="chart" id="matrix"></div>
   </section>
+
+  <h2 class="section-title">What gets replies</h2>
+
+  <div class="pair">
+    <section class="card" id="by-platform">
+      <h2>By platform</h2>
+      <p class="note">Where you applied, and how often each place led to a reply or a next round. Platforms with fewer than 3 applications are grouped as Other.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Platform</th><th class="num">Applied</th><th>Reply rate</th><th class="num">Next rounds</th></tr></thead>
+          <tbody id="platform-body"></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card" id="by-role">
+      <h2>By role type</h2>
+      <p class="note">Role titles grouped by keywords (for example "Data Engineer", "Analyst"), and how often each led to a reply or a next round.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Role type</th><th class="num">Applied</th><th>Reply rate</th><th class="num">Next rounds</th></tr></thead>
+          <tbody id="role-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" id="job-details">
+    <h2>Job details from emails</h2>
+    <p class="note">Only counted when an email mentions it, so these cover <b id="details-coverage">—</b> of your applications.</p>
+    <div class="pair">
+      <div><p class="note">Work mode</p><div class="chips" id="work-mode"></div></div>
+      <div><p class="note">Employment type</p><div class="chips" id="employment"></div></div>
+    </div>
+  </section>
+
+  <h2 class="section-title">All applications</h2>
 
   <section class="card" id="companies">
     <h2>Applications by company</h2>
@@ -101,6 +193,7 @@
           <th class="num" data-sort="applications" aria-sort="descending"><button type="button">Applications</button></th>
           <th class="num opt" data-sort="waiting"><button type="button">Waiting</button></th>
           <th class="num" data-sort="next_round"><button type="button">Next round</button></th>
+          <th class="num opt" data-sort="offers"><button type="button">Offers</button></th>
           <th class="num" data-sort="rejected"><button type="button">Rejected</button></th>
           <th class="opt" data-sort="last_applied"><button type="button">Last applied</button></th>
         </tr></thead>
@@ -109,48 +202,62 @@
     </div>
   </section>
 
-  <div class="pair">
-    <section class="card" id="rejections">
-      <h2>Rejections so far</h2>
-      <p class="note" id="avg-days">Newest first.</p>
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Application</th><th class="opt">Applied</th><th>Rejected</th><th class="num">Days</th></tr></thead>
-          <tbody id="rejections-body"></tbody>
-        </table>
-      </div>
-    </section>
-    <section class="card" id="next-rounds">
-      <h2>Next rounds</h2>
-      <p class="note">What each company asked you to do next, with the link from the email.</p>
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Application</th><th>Next step</th><th class="opt">Received</th></tr></thead>
-          <tbody id="next-body"></tbody>
-        </table>
-      </div>
-    </section>
-  </div>
+  <section class="card" id="rejections">
+    <h2>Rejections so far</h2>
+    <p class="note" id="avg-days">Newest first.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Application</th><th class="opt">Applied</th><th>Rejected</th><th class="num">Days</th></tr></thead>
+        <tbody id="rejections-body"></tbody>
+      </table>
+    </div>
+  </section>
 </main>
 
 <script>
 const fmt = d3.format(',');
+// Small but non-zero shares read as "<1%", not "0%".
+const pct = (v) => (v > 0 && v < 0.005 ? '<1%' : d3.format('.0%')(v));
 const parseDay = (s) => new Date(s + 'T00:00:00Z');
 const dayLabel = (s) => d3.utcFormat('%b %-d')(parseDay(s));
 const iso = d3.utcFormat('%Y-%m-%d');
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MAX_WEEKS = 12;
+const STALE_DAYS = 14;
 const $ = (id) => document.getElementById(id);
 const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+const TODAY = iso(new Date());
 
-const clean = (r) => ({
-  company: (r.company || '').trim() || 'Unknown company',
-  role: (r.role || '').trim(),
-  date_applied: (r.date_applied || '').slice(0, 10),
-  status: r.status || 'Applied',
-  status_updated: (r.status_updated || '').slice(0, 10),
-  next_step: (r.next_step_details || '').trim(),
-});
+// Role titles are grouped by the first matching pattern.
+const ROLE_TYPES = [
+  ['Data Engineer', /data engineer|etl|data platform|pipeline/i],
+  ['Data Scientist', /data scien|decision scien|research scien/i],
+  ['ML / AI Engineer', /machine learning|\bml\b|\bai\b|\bllm|deep learning|nlp|computer vision/i],
+  ['BI / Analytics', /business intelligence|\bbi\b|analytics engineer|dashboard|power bi|tableau|reporting/i],
+  ['Data / Business Analyst', /analyst/i],
+  ['Software Engineer', /software|developer|programmer|back.?end|front.?end|full.?stack/i],
+];
+const roleType = (role) => (ROLE_TYPES.find(([, re]) => re.test(role)) || ['Other'])[0];
+
+const clean = (r) => {
+  const row = {
+    company: (r.company || '').trim() || 'Unknown company',
+    role: (r.role || '').trim(),
+    platform: (r.platform || '').trim(),
+    date_applied: (r.date_applied || '').slice(0, 10),
+    status: r.status || 'Applied',
+    status_updated: (r.status_updated || '').slice(0, 10),
+    next_step: (r.next_step_details || '').trim(),
+    next_step_type: (r.next_step_type || '').trim(),
+    next_step_due: (r.next_step_due || '').slice(0, 10),
+    work_mode: (r.work_mode || '').trim(),
+    employment_type: (r.employment_type || '').trim(),
+  };
+  row.replied = row.status !== 'Applied';
+  // Older rows have no first_response_date; their latest status date is the best stand-in.
+  row.reply_date = row.replied ? ((r.first_response_date || '').slice(0, 10) || row.status_updated) : '';
+  return row;
+};
 const label = (r) => (r.role ? `${r.company} — ${r.role}` : r.company);
 
 function cell(text, cls) {
@@ -160,25 +267,150 @@ function cell(text, cls) {
   return td;
 }
 
+function showTip(tip, el, event, title, lines) {
+  tip.attr('hidden', null).html('');
+  tip.append('div').attr('class', 'd').text(title);
+  lines.forEach((l) => tip.append('div').text(l));
+  const [x, y] = d3.pointer(event, el);
+  const tw = tip.node().offsetWidth;
+  tip.style('left', `${Math.max(0, Math.min(x + 12, el.clientWidth - tw))}px`).style('top', `${y + 12}px`);
+}
+
+// Weeks (Mondays) from the first week with data in the last MAX_WEEKS to the latest.
+function weekRange(days) {
+  const lastWeek = d3.utcMonday.floor(parseDay(d3.max([...days, TODAY])));
+  const windowStart = d3.utcMonday.offset(lastWeek, -(MAX_WEEKS - 1));
+  const first = days.map(parseDay).filter((d) => d >= windowStart).sort((a, b) => a - b)[0] || lastWeek;
+  return d3.utcMonday.range(d3.utcMonday.floor(first), d3.utcMonday.offset(lastWeek, 1));
+}
+
 function drawSummary(rows, daily) {
   const count = (s) => rows.filter((r) => r.status === s).length;
-  const total = rows.length, rejected = count('Rejected'), next = count('Next Round');
+  const total = rows.length, rejected = count('Rejected'), next = count('Next Round'), offers = count('Offer');
+  const replied = rows.filter((r) => r.replied).length;
+  const stale = rows.filter((r) => !r.replied && r.date_applied && daysBetween(r.date_applied, TODAY) > STALE_DAYS).length;
   const companies = new Set(rows.map((r) => r.company.toLowerCase())).size;
   $('t-total').textContent = fmt(total);
-  $('t-waiting').textContent = fmt(count('Applied'));
+  $('t-total-note').textContent = `At ${fmt(companies)} companies`;
+  $('t-reply').textContent = total ? pct(replied / total) : '—';
+  $('t-reply-note').textContent = `${fmt(replied)} replies so far`;
   $('t-next').textContent = fmt(next);
+  $('t-offers').textContent = fmt(offers);
   $('t-rejected').textContent = fmt(rejected);
-  $('t-response').textContent = total ? `${Math.round(100 * (rejected + next) / total)}%` : '—';
+  $('t-stale').textContent = fmt(stale);
 
   const lede = $('lede');
   lede.replaceChildren();
   const add = (text, bold) => lede.append(bold ? Object.assign(document.createElement('b'), {textContent: text}) : document.createTextNode(text));
   add('You have applied for '); add(fmt(total), true); add(' roles at '); add(fmt(companies), true);
-  add(' companies. '); add(fmt(rejected), true); add(' have said no so far and '); add(fmt(next), true);
-  add(' have moved you to a next round.');
+  add(' companies and heard back from '); add(pct(total ? replied / total : 0), true); add(' of them. ');
+  const open = rows.filter((r) => r.status === 'Next Round' || r.status === 'Offer').length;
+  if (open) { add(fmt(open), true); add(open === 1 ? ' next round or offer is open.' : ' next rounds or offers are open.'); }
   if (daily.length) {
     const busiest = daily.reduce((a, b) => (b.n > a.n ? b : a));
     add(' Your busiest day was '); add(dayLabel(busiest.day), true); add(' with '); add(fmt(busiest.n), true); add(' applications.');
+  }
+  const latest = d3.max(rows, (r) => d3.max([r.date_applied, r.status_updated]));
+  if (latest) $('asof').textContent = `Latest email recorded: ${d3.utcFormat('%b %-d, %Y')(parseDay(latest))}. Updated by the nightly tracker run.`;
+}
+
+function drawAction(rows) {
+  const open = rows.filter((r) => r.status === 'Next Round' || r.status === 'Offer')
+    .sort((a, b) => (a.next_step_due || '9999').localeCompare(b.next_step_due || '9999') || d3.descending(a.status_updated, b.status_updated));
+  const tbody = $('action-body');
+  tbody.replaceChildren();
+  $('action-empty').hidden = open.length > 0;
+  for (const r of open) {
+    const tr = document.createElement('tr');
+    const type = document.createElement('td');
+    const pill = Object.assign(document.createElement('span'), {className: 'pill ' + (r.status === 'Offer' ? 'ok' : ''), textContent: r.status === 'Offer' ? 'Offer' : (r.next_step_type || 'Next round')});
+    type.append(pill);
+    let dueText = '', dueCls = '';
+    if (r.next_step_due) {
+      const left = daysBetween(TODAY, r.next_step_due);
+      dueText = dayLabel(r.next_step_due) + (left < 0 ? ' (passed)' : left === 0 ? ' (today)' : left <= 3 ? ` (${left}d)` : '');
+      dueCls = left < 0 ? 'zero' : left <= 3 ? 'bad' : '';
+    }
+    dueCls = (dueCls + ' nowrap').trim();
+    const step = r.status === 'Offer' ? cell('Offer received. Check the email for details and a reply-by date.') : stepCell(r.next_step);
+    tr.append(cell(label(r)), type, cell(dueText, dueCls), step, cell(r.status_updated ? dayLabel(r.status_updated) : '', 'opt nowrap'));
+    tbody.append(tr);
+  }
+}
+
+function drawFunnel(rows) {
+  const total = rows.length;
+  const stages = [
+    ['Applied', total],
+    ['Got a reply', rows.filter((r) => r.replied).length],
+    ['Next round', rows.filter((r) => r.status === 'Next Round' || r.status === 'Offer' || (r.status === 'Rejected' && r.next_step_type)).length],
+    ['Offer', rows.filter((r) => r.status === 'Offer').length],
+  ];
+  const el = $('funnel');
+  el.replaceChildren();
+  for (const [name, n] of stages) {
+    const row = Object.assign(document.createElement('div'), {className: 'funnel-row'});
+    const lab = Object.assign(document.createElement('div'), {className: 'funnel-label', textContent: name});
+    const bar = Object.assign(document.createElement('div'), {className: 'funnel-bar'});
+    const fill = Object.assign(document.createElement('div'), {className: 'funnel-fill'});
+    fill.style.width = `${total ? (100 * n) / total : 0}%`;
+    const text = Object.assign(document.createElement('div'), {className: 'funnel-text', textContent: `${fmt(n)}${name === 'Applied' || !total ? '' : ` · ${pct(n / total)}`}`});
+    bar.append(fill);
+    row.append(lab, bar, text);
+    el.append(row);
+  }
+  const waits = rows.filter((r) => r.replied && r.reply_date && r.date_applied).map((r) => daysBetween(r.date_applied, r.reply_date)).filter((d) => d >= 0);
+  $('reply-speed').textContent = waits.length
+    ? `Companies that replied took ${d3.format('.0f')(d3.median(waits))} days (median) to reply.`
+    : '';
+}
+
+function drawAging(rows) {
+  const buckets = [['0–7 days', 0, 7], ['8–14 days', 8, 14], ['15–30 days', 15, 30], ['30+ days', 31, Infinity]];
+  const waiting = rows.filter((r) => !r.replied && r.date_applied).map((r) => daysBetween(r.date_applied, TODAY));
+  const data = buckets.map(([name, lo, hi]) => ({name, n: waiting.filter((d) => d >= lo && d <= hi).length, stale: lo > STALE_DAYS}));
+  const el = $('aging');
+  el.replaceChildren();
+  const width = el.clientWidth || 400, labelW = 84, rowH = 34, h = data.length * rowH;
+  const x = d3.scaleLinear([0, d3.max(data, (d) => d.n) || 1], [0, Math.max(40, width - labelW - 48)]);
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${h}`).attr('role', 'img').attr('aria-label', 'Applications waiting for a reply by age').style('display', 'block');
+  const g = svg.selectAll('g').data(data).join('g').attr('transform', (d, i) => `translate(0,${i * rowH})`);
+  g.append('text').attr('x', 0).attr('y', rowH / 2).attr('dominant-baseline', 'middle').attr('fill', 'var(--fg)').style('font-size', '13px').text((d) => d.name);
+  g.append('rect').attr('x', labelW).attr('y', 7).attr('height', rowH - 14).attr('rx', 4).attr('width', (d) => Math.max(d.n ? 2 : 0, x(d.n)))
+    .attr('fill', (d) => (d.stale ? 'var(--accent-2)' : 'var(--accent)'));
+  g.append('text').attr('x', (d) => labelW + x(d.n) + 6).attr('y', rowH / 2).attr('dominant-baseline', 'middle').attr('fill', 'var(--fg)')
+    .style('font-size', '13px').style('font-weight', 600).style('font-variant-numeric', 'tabular-nums').text((d) => fmt(d.n));
+}
+
+function drawWeekly(rows) {
+  const el = $('weekly-chart');
+  el.replaceChildren();
+  const sentDays = rows.map((r) => r.date_applied).filter(Boolean);
+  if (!sentDays.length) return;
+  const weeks = weekRange(sentDays);
+  const key = (day) => iso(d3.utcMonday.floor(parseDay(day)));
+  const sent = d3.rollup(sentDays, (v) => v.length, key);
+  const replies = d3.rollup(rows.map((r) => r.reply_date).filter(Boolean), (v) => v.length, key);
+  const data = weeks.map((w) => ({w, sent: sent.get(iso(w)) || 0, replies: replies.get(iso(w)) || 0}));
+
+  const width = el.clientWidth || 600, height = 220, m = {top: 16, right: 8, bottom: 26, left: 36};
+  // Cap the width per week so a few weeks don't make very wide bars.
+  const x = d3.scaleBand(data.map((d) => iso(d.w)), [m.left, Math.min(width - m.right, m.left + data.length * 110)]).padding(0.25);
+  const x2 = d3.scaleBand(['sent', 'replies'], [0, x.bandwidth()]).padding(0.08);
+  const y = d3.scaleLinear([0, d3.max(data, (d) => Math.max(d.sent, d.replies)) || 1], [height - m.bottom, m.top]).nice();
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`).attr('role', 'img').attr('aria-label', 'Applications sent and replies received per week').style('display', 'block');
+  svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.left).attr('x2', width - m.right).attr('y1', y).attr('y2', y).attr('stroke', 'var(--grid)');
+  svg.append('g').selectAll('text').data(y.ticks(4)).join('text').attr('x', m.left - 6).attr('y', y).attr('text-anchor', 'end').attr('dominant-baseline', 'middle').attr('fill', 'var(--muted)').style('font-size', '11px').text(fmt);
+  const every = Math.ceil(data.length / Math.max(1, Math.floor(width / 70)));
+  svg.append('g').selectAll('text').data(data).join('text').attr('x', (d) => x(iso(d.w)) + x.bandwidth() / 2).attr('y', height - 8).attr('text-anchor', 'middle').attr('fill', 'var(--muted)').style('font-size', '11px').text((d, i) => (i % every ? '' : d3.utcFormat('%b %-d')(d.w)));
+  const tip = d3.select(el).append('div').attr('class', 'tip').attr('hidden', '');
+  const g = svg.append('g').selectAll('g').data(data).join('g').attr('transform', (d) => `translate(${x(iso(d.w))},0)`)
+    .on('pointermove', (e, d) => showTip(tip, el, e, `Week of ${d3.utcFormat('%b %-d')(d.w)}`, [`${fmt(d.sent)} applications sent`, `${fmt(d.replies)} replies received`]))
+    .on('pointerleave', () => tip.attr('hidden', ''));
+  g.append('rect').attr('x', 0).attr('y', m.top).attr('width', x.bandwidth()).attr('height', height - m.bottom - m.top).attr('fill', 'transparent');
+  for (const [k, color] of [['sent', 'var(--accent)'], ['replies', 'var(--accent-2)']]) {
+    g.append('rect').attr('x', x2(k)).attr('width', x2.bandwidth()).attr('rx', 3)
+      .attr('y', (d) => y(d[k])).attr('height', (d) => y(0) - y(d[k])).attr('fill', color);
   }
 }
 
@@ -187,12 +419,7 @@ function drawMatrix(daily) {
   el.replaceChildren();
   if (!daily.length) { el.textContent = 'No applications yet.'; return; }
   const counts = new Map(daily.map((d) => [d.day, d.n]));
-  const lastWeek = d3.utcMonday.floor(parseDay(daily[daily.length - 1].day));
-  const windowStart = d3.utcMonday.offset(lastWeek, -(MAX_WEEKS - 1));
-  // Start at the first week that has data inside the window.
-  const first = daily.map((d) => parseDay(d.day)).find((d) => d >= windowStart) || lastWeek;
-  const weeks = d3.utcMonday.range(d3.utcMonday.floor(first), d3.utcMonday.offset(lastWeek, 1));
-
+  const weeks = weekRange(daily.map((d) => d.day));
   const labelW = 44, gap = 4, headH = 22;
   const cellSize = Math.max(22, Math.min(52, Math.floor(((el.clientWidth || 600) - labelW) / weeks.length) - gap));
   const svgW = labelW + weeks.length * (cellSize + gap);
@@ -205,11 +432,9 @@ function drawMatrix(daily) {
     .attr('width', '100%').attr('viewBox', `0 0 ${svgW} ${svgH}`)
     .attr('role', 'img').attr('aria-label', 'Applications per day by weekday and week')
     .style('max-width', `${svgW}px`).style('display', 'block');
-
   svg.append('g').selectAll('text').data([...DAYS, 'Week']).join('text')
     .attr('x', 0).attr('y', (d, i) => headH + i * (cellSize + gap) + cellSize / 2)
-    .attr('dominant-baseline', 'middle').attr('fill', 'var(--muted)').style('font-size', '12px')
-    .text((d) => d);
+    .attr('dominant-baseline', 'middle').attr('fill', 'var(--muted)').style('font-size', '12px').text((d) => d);
   const every = cellSize < 40 ? 2 : 1;
   svg.append('g').selectAll('text').data(weeks).join('text')
     .attr('x', (d, i) => labelW + i * (cellSize + gap) + cellSize / 2).attr('y', 12)
@@ -217,47 +442,84 @@ function drawMatrix(daily) {
     .text((d, i) => (i % every ? '' : d3.utcFormat('%b %-d')(d)));
 
   const tip = d3.select(el).append('div').attr('class', 'tip').attr('hidden', '');
-  const show = (event, title, n) => {
-    tip.attr('hidden', null).html('');
-    tip.append('div').attr('class', 'd').text(title);
-    tip.append('div').text(`${fmt(n)} application${n === 1 ? '' : 's'}`);
-    const [x, y] = d3.pointer(event, el);
-    const tw = tip.node().offsetWidth;
-    tip.style('left', `${Math.max(0, Math.min(x + 12, el.clientWidth - tw))}px`).style('top', `${y + 12}px`);
-  };
   const hide = () => tip.attr('hidden', '');
-
-  const today = iso(new Date());
   const days = [];
   weeks.forEach((w, wi) => DAYS.forEach((_, di) => {
     const date = d3.utcDay.offset(w, di);
-    if (iso(date) <= today) days.push({date, wi, di, n: counts.get(iso(date)) || 0});
+    if (iso(date) <= TODAY) days.push({date, wi, di, n: counts.get(iso(date)) || 0});
   }));
+  const plural = (n) => `${fmt(n)} application${n === 1 ? '' : 's'}`;
   const g = svg.append('g').selectAll('g').data(days).join('g')
     .attr('transform', (d) => `translate(${labelW + d.wi * (cellSize + gap)},${headH + d.di * (cellSize + gap)})`)
-    .on('pointermove', (e, d) => show(e, d3.utcFormat('%a, %b %-d')(d.date), d.n)).on('pointerleave', hide);
+    .on('pointermove', (e, d) => showTip(tip, el, e, d3.utcFormat('%a, %b %-d')(d.date), [plural(d.n)])).on('pointerleave', hide);
   g.append('rect').attr('width', cellSize).attr('height', cellSize).attr('rx', 4)
     .attr('fill', (d) => (d.n ? 'var(--accent)' : 'var(--grid)')).attr('fill-opacity', (d) => (d.n ? op(d.n) : 1));
   g.append('text').attr('x', cellSize / 2).attr('y', cellSize / 2)
     .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
     .attr('fill', (d) => (d.n && op(d.n) > 0.55 ? 'var(--panel)' : 'var(--fg)'))
-    .style('font-size', small).style('font-variant-numeric', 'tabular-nums')
-    .text((d) => (d.n ? d.n : ''));
-
+    .style('font-size', small).style('font-variant-numeric', 'tabular-nums').text((d) => (d.n ? d.n : ''));
   const totals = weeks.map((w, wi) => ({w, wi, n: d3.sum(DAYS, (_, di) => counts.get(iso(d3.utcDay.offset(w, di))) || 0)}));
   const tg = svg.append('g').selectAll('g').data(totals).join('g')
     .attr('transform', (d) => `translate(${labelW + d.wi * (cellSize + gap)},${headH + 7 * (cellSize + gap)})`)
-    .on('pointermove', (e, d) => show(e, `Week of ${d3.utcFormat('%b %-d')(d.w)}`, d.n)).on('pointerleave', hide);
-  tg.append('rect').attr('x', .5).attr('y', .5).attr('width', cellSize - 1).attr('height', cellSize - 1).attr('rx', 4)
-    .attr('fill', 'none').attr('stroke', 'var(--line)');
-  tg.append('text').attr('x', cellSize / 2).attr('y', cellSize / 2)
-    .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
-    .attr('fill', 'var(--fg)').style('font-weight', 600).style('font-size', small)
-    .style('font-variant-numeric', 'tabular-nums').text((d) => fmt(d.n));
+    .on('pointermove', (e, d) => showTip(tip, el, e, `Week of ${d3.utcFormat('%b %-d')(d.w)}`, [plural(d.n)])).on('pointerleave', hide);
+  tg.append('rect').attr('x', .5).attr('y', .5).attr('width', cellSize - 1).attr('height', cellSize - 1).attr('rx', 4).attr('fill', 'none').attr('stroke', 'var(--line)');
+  tg.append('text').attr('x', cellSize / 2).attr('y', cellSize / 2).attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
+    .attr('fill', 'var(--fg)').style('font-weight', 600).style('font-size', small).style('font-variant-numeric', 'tabular-nums').text((d) => fmt(d.n));
+}
+
+// Reply rate and next rounds per group, as a table with an in-cell bar on one shared scale.
+function drawBreakdown(tbodyId, rows, groupOf, minSize) {
+  let groups = d3.rollups(rows, (v) => ({
+    n: v.length,
+    replied: v.filter((r) => r.replied).length,
+    next: v.filter((r) => r.status === 'Next Round' || r.status === 'Offer' || (r.status === 'Rejected' && r.next_step_type)).length,
+  }), groupOf).map(([name, s]) => ({name, ...s}));
+  if (minSize) {
+    const small = groups.filter((g) => g.n < minSize && g.name !== 'Not stated');
+    if (small.length > 1) {
+      groups = groups.filter((g) => !small.includes(g));
+      const other = groups.find((g) => g.name === 'Other') || (groups.push({name: 'Other', n: 0, replied: 0, next: 0}), groups[groups.length - 1]);
+      small.forEach((g) => { other.n += g.n; other.replied += g.replied; other.next += g.next; });
+    }
+  }
+  groups.sort((a, b) => (a.name === 'Other' || a.name === 'Not stated') - (b.name === 'Other' || b.name === 'Not stated') || b.n - a.n);
+  const tbody = $(tbodyId);
+  tbody.replaceChildren();
+  for (const g of groups) {
+    const rate = g.n ? g.replied / g.n : 0;
+    const tr = document.createElement('tr');
+    const rateTd = document.createElement('td');
+    const wrap = Object.assign(document.createElement('div'), {className: 'bar-cell'});
+    const track = Object.assign(document.createElement('div'), {className: 'bar-track'});
+    const fill = Object.assign(document.createElement('div'), {className: 'bar-fill'});
+    fill.style.width = `${rate * 100}%`;
+    track.append(fill);
+    wrap.append(track, Object.assign(document.createElement('span'), {textContent: pct(rate)}));
+    rateTd.append(wrap);
+    tr.append(cell(g.name), cell(fmt(g.n), 'num'), rateTd, cell(fmt(g.next), 'num' + (g.next ? ' ok' : ' zero')));
+    tbody.append(tr);
+  }
+}
+
+function drawDetails(rows) {
+  const known = rows.filter((r) => r.work_mode || r.employment_type).length;
+  $('details-coverage').textContent = rows.length ? `${fmt(known)} (${pct(known / rows.length)})` : '0';
+  for (const [id, field, order] of [['work-mode', 'work_mode', ['Remote', 'Hybrid', 'On-site']], ['employment', 'employment_type', ['Full-time', 'Contract', 'Internship', 'Part-time', 'Temporary']]]) {
+    const el = $(id);
+    el.replaceChildren();
+    const counts = d3.rollups(rows.filter((r) => r[field]), (v) => ({n: v.length, replied: v.filter((r) => r.replied).length}), (r) => r[field])
+      .sort((a, b) => ((order.indexOf(a[0]) + 1) || 99) - ((order.indexOf(b[0]) + 1) || 99));
+    if (!counts.length) { el.append(Object.assign(document.createElement('p'), {className: 'empty', textContent: 'Not mentioned in any email yet.'})); continue; }
+    for (const [name, s] of counts) {
+      const chip = Object.assign(document.createElement('div'), {className: 'chip'});
+      chip.append(Object.assign(document.createElement('b'), {textContent: `${name} `}), document.createTextNode(`${fmt(s.n)} · ${pct(s.replied / s.n)} replied`));
+      el.append(chip);
+    }
+  }
 }
 
 const sortState = {key: 'applications', dir: 'descending', q: ''};
-const numeric = new Set(['applications', 'waiting', 'next_round', 'rejected']);
+const numeric = new Set(['applications', 'waiting', 'next_round', 'offers', 'rejected']);
 let companyRows = [];
 
 function drawCompanies() {
@@ -274,6 +536,7 @@ function drawCompanies() {
         cell(fmt(r.applications), 'num'),
         cell(fmt(r.waiting), 'num opt' + (r.waiting ? '' : ' zero')),
         cell(fmt(r.next_round), 'num' + (r.next_round ? ' ok' : ' zero')),
+        cell(fmt(r.offers), 'num opt' + (r.offers ? ' ok' : ' zero')),
         cell(fmt(r.rejected), 'num' + (r.rejected ? ' bad' : ' zero')),
         cell(r.last_applied ? dayLabel(r.last_applied) : '', 'opt'),
       );
@@ -300,14 +563,12 @@ function stepCell(text) {
   if (!m) { td.textContent = text; return td; }
   const before = text.slice(0, m.index).replace(/[\s:]+$/, '');
   if (before) td.append(document.createTextNode(before + ' '));
-  const a = Object.assign(document.createElement('a'), {href: m[0], target: '_blank', rel: 'noopener noreferrer', textContent: 'Open link'});
-  td.append(a);
+  td.append(Object.assign(document.createElement('a'), {href: m[0], target: '_blank', rel: 'noopener noreferrer', textContent: 'Open link'}));
   return td;
 }
 
-function drawLists(rows) {
-  const rejected = rows.filter((r) => r.status === 'Rejected')
-    .sort((a, b) => d3.descending(a.status_updated, b.status_updated));
+function drawRejections(rows) {
+  const rejected = rows.filter((r) => r.status === 'Rejected').sort((a, b) => d3.descending(a.status_updated, b.status_updated));
   const rb = $('rejections-body');
   rb.replaceChildren();
   const waits = [];
@@ -322,45 +583,38 @@ function drawLists(rows) {
   $('avg-days').textContent = waits.length
     ? `Newest first. On average a rejection came ${d3.format('.1f')(d3.mean(waits))} days after you applied.`
     : 'Newest first.';
-
-  const nb = $('next-body');
-  nb.replaceChildren();
-  rows.filter((r) => r.status === 'Next Round')
-    .sort((a, b) => d3.descending(a.status_updated, b.status_updated))
-    .forEach((r) => {
-      const tr = document.createElement('tr');
-      tr.append(cell(label(r)), stepCell(r.next_step), cell(r.status_updated ? dayLabel(r.status_updated) : '', 'opt'));
-      nb.append(tr);
-    });
 }
 
 async function load() {
-  // no-store: always read the latest commit's data, not a cached copy.
+  // no-store: always read the latest published data, not a cached copy.
   const res = await fetch('applications.csv', {cache: 'no-store'});
   if (!res.ok) throw new Error(`applications.csv: HTTP ${res.status}`);
   const rows = d3.csvParse(await res.text()).map(clean);
   const daily = d3.rollups(rows.filter((r) => r.date_applied), (v) => v.length, (r) => r.date_applied)
     .map(([day, n]) => ({day, n})).sort((a, b) => d3.ascending(a.day, b.day));
-  // Group case-insensitively ("Acme" and "ACME" are one company), showing the
-  // most common spelling.
+  // Group case-insensitively ("Acme" and "ACME" are one company), showing the most common spelling.
   companyRows = d3.rollups(rows, (v) => ({
     company: d3.greatest(d3.rollups(v, (x) => x.length, (r) => r.company), (x) => x[1])[0],
     applications: v.length,
     waiting: v.filter((r) => r.status === 'Applied').length,
     next_round: v.filter((r) => r.status === 'Next Round').length,
+    offers: v.filter((r) => r.status === 'Offer').length,
     rejected: v.filter((r) => r.status === 'Rejected').length,
     last_applied: d3.max(v, (r) => r.date_applied) || '',
   }), (r) => r.company.toLowerCase()).map(([, s]) => s);
 
   drawSummary(rows, daily);
-  drawMatrix(daily);
+  drawAction(rows);
+  drawFunnel(rows);
+  drawDetails(rows);
+  drawBreakdown('platform-body', rows, (r) => r.platform || 'Not stated', 3);
+  drawBreakdown('role-body', rows, (r) => roleType(r.role));
   drawCompanies();
-  drawLists(rows);
-  const latest = d3.max(rows, (r) => d3.max([r.date_applied, r.status_updated]));
-  if (latest) $('asof').textContent = `Latest email recorded: ${d3.utcFormat('%b %-d, %Y')(parseDay(latest))}. Updated by the nightly tracker run.`;
+  drawRejections(rows);
+  const drawCharts = () => { drawAging(rows); drawWeekly(rows); drawMatrix(daily); };
+  drawCharts();
   let resizeTimer;
-  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => drawMatrix(daily), 150); });
-
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawCharts, 150); });
 }
 
 load().catch((err) => {

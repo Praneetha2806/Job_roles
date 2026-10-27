@@ -82,11 +82,30 @@ CSV_HEADERS = [
     "gmail_message_id",
     "status_updated",
     "next_step_details",
+    # Added later; older rows have them blank.
+    "next_step_type",
+    "next_step_due",
+    "first_response_date",
+    "work_mode",
+    "location",
+    "employment_type",
+    "salary",
 ]
 
 STATUS_APPLIED = "Applied"
 STATUS_REJECTED = "Rejected"
 STATUS_NEXT_ROUND = "Next Round"
+STATUS_OFFER = "Offer"
+
+# Details about the job that any email may mention; filled in when a row
+# doesn't have them yet.
+JOB_DETAIL_FIELDS = (
+    "role", "job_id", "skills_required", "platform",
+    "work_mode", "location", "employment_type", "salary",
+)
+# Two confirmations for the same company and role this close together are one
+# application (e.g. LinkedIn's "application sent" plus the company's own email).
+DUPLICATE_WINDOW_DAYS = 3
 
 # Keywords that decide which emails are recorded. Matching is case-insensitive
 # and looks at the subject and body. Edit these lists to tune what gets picked up.
@@ -124,6 +143,14 @@ NEXT_STEP_PHRASES = [
     "interview",
 ]
 
+OFFER_PHRASES = [
+    "offer letter",
+    "pleased to offer",
+    "happy to offer",
+    "excited to offer",
+    "job offer",
+]
+
 # Words that tie an email to a job application, so generic emails that just
 # say "thank you" or "unfortunately" aren't sent to the LLM.
 JOB_CONTEXT_TERMS = [
@@ -151,7 +178,7 @@ GMAIL_QUERIES = [
     '(subject:"application" OR subject:"applied")',
 ] + [
     f"{_gmail_or(phrases)} {_gmail_or(JOB_CONTEXT_TERMS)}"
-    for phrases in (CONFIRMATION_PHRASES, REJECTION_PHRASES, NEXT_STEP_PHRASES)
+    for phrases in (CONFIRMATION_PHRASES, REJECTION_PHRASES, NEXT_STEP_PHRASES, OFFER_PHRASES)
 ]
 
 # Applied to every search. Confirmations/rejections land in Primary or Updates;
@@ -172,6 +199,7 @@ EXTRACTION_PROMPT = """You are helping track the status of job applications from
 a company's own careers page, etc.).
 
 Email metadata:
+Date received: {email_date}
 From: {sender}
 Subject: {subject}
 Body: {snippet}
@@ -180,6 +208,7 @@ Keyword matches found by a simple text scan (hints only; use your judgment):
 - confirmation keywords: {confirmation_hits}
 - rejection keywords: {rejection_hits}
 - next-step keywords: {next_step_hits}
+- offer keywords: {offer_hits}
 
 Classify the email as exactly one email_type:
 - "application_confirmation": confirms a job application was submitted/received \
@@ -189,6 +218,7 @@ Classify the email as exactly one email_type:
 "not moving forward", "decided to pursue other candidates").
 - "next_step": the candidate is being taken forward, e.g. an online assessment, \
 coding challenge, survey/questionnaire to complete, or an interview invitation/scheduling.
+- "offer": the company is offering the candidate the job.
 - "other": anything else (newsletters, job-alert digests, recommendations, marketing, \
 account/security emails, or emails not about a specific application by the candidate).
 
@@ -199,17 +229,35 @@ Extract the company and role the email is about. For "next_step", put the action
 required and any assessment/survey/scheduling link in next_step_details (copy links \
 exactly as they appear). Some emails include a requisition/job ID (e.g. "Job ID: 12345", \
 "Req #R-00123") and/or required skills; extract them if present, otherwise use null. \
+Also extract, only when the email states them:
+- work_mode: "Remote", "Hybrid" or "On-site".
+- location: city and state/country of the job.
+- employment_type: "Full-time", "Part-time", "Contract", "Internship" or "Temporary".
+- salary: the pay or range exactly as written (e.g. "$85,000-$95,000/yr").
+- next_step_type (only for "next_step"): "Assessment" (test, coding challenge, \
+recorded/video screening), "Survey" (questionnaire, form, work-authorization or EEO \
+questions), "Interview" (call or interview to attend or schedule), or "Other".
+- next_step_due (only for "next_step"): the deadline to complete it, or the date of a \
+scheduled interview, as YYYY-MM-DD. Work out relative deadlines ("within 4 days", \
+"by Friday") from the date received.
+
 Do not guess or invent values that are not actually present in the text.
 
 Respond with ONLY a JSON object, no other text, in this exact shape:
 {{
-  "email_type": "application_confirmation" | "rejection" | "next_step" | "other",
+  "email_type": "application_confirmation" | "rejection" | "next_step" | "offer" | "other",
   "company": "string or null",
   "role": "string or null",
   "platform": "string or null (e.g. LinkedIn, Indeed, Greenhouse, Workday, Company Careers Page)",
   "job_id": "string or null",
   "skills_required": "comma-separated string or null",
-  "next_step_details": "string or null"
+  "next_step_details": "string or null",
+  "next_step_type": "Assessment" | "Survey" | "Interview" | "Other" | null,
+  "next_step_due": "YYYY-MM-DD or null",
+  "work_mode": "Remote" | "Hybrid" | "On-site" | null,
+  "location": "string or null",
+  "employment_type": "Full-time" | "Part-time" | "Contract" | "Internship" | "Temporary" | null,
+  "salary": "string or null"
 }}
 """
 
@@ -338,6 +386,7 @@ def keyword_hits(email: dict) -> dict[str, list[str]]:
         "confirmation": [p for p in CONFIRMATION_PHRASES if p in haystack],
         "rejection": [p for p in REJECTION_PHRASES if p in haystack],
         "next_step": [p for p in NEXT_STEP_PHRASES if p in haystack],
+        "offer": [p for p in OFFER_PHRASES if p in haystack],
     }
 
 
@@ -345,6 +394,7 @@ EMAIL_TYPE_TO_STATUS = {
     "application_confirmation": STATUS_APPLIED,
     "rejection": STATUS_REJECTED,
     "next_step": STATUS_NEXT_ROUND,
+    "offer": STATUS_OFFER,
 }
 
 
@@ -392,12 +442,14 @@ def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
 def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
     hits = keyword_hits(email)
     prompt = EXTRACTION_PROMPT.format(
+        email_date=email["internal_date"].strftime("%Y-%m-%d (%A)"),
         sender=email["sender"],
         subject=email["subject"],
         snippet=email["snippet"],
         confirmation_hits=", ".join(hits["confirmation"]) or "none",
         rejection_hits=", ".join(hits["rejection"]) or "none",
         next_step_hits=", ".join(hits["next_step"]) or "none",
+        offer_hits=", ".join(hits["offer"]) or "none",
     )
     response = generate_with_retry(client, prompt)
     text = (response.text or "").strip()
@@ -461,8 +513,8 @@ def _loosely_equal(a: str, b: str) -> bool:
 
 
 def find_matching_row(rows: list[dict], company: str | None, role: str | None) -> dict | None:
-    """Find the logged application a rejection/next-step email refers to:
-    same company, preferring a matching role, most recently applied."""
+    """Find the logged application a status email refers to: same company,
+    preferring a matching role, most recently applied."""
     company_n, role_n = _norm(company), _norm(role)
     same_company = [r for r in rows if _loosely_equal(_norm(r["company"]), company_n)]
     if not same_company:
@@ -472,38 +524,84 @@ def find_matching_row(rows: list[dict], company: str | None, role: str | None) -
     return max(candidates, key=lambda r: r["date_applied"])
 
 
+def find_duplicate(rows: list[dict], company: str | None, role: str | None, day: str) -> dict | None:
+    """A row this confirmation repeats: same company, same role (or both
+    blank), applied within DUPLICATE_WINDOW_DAYS."""
+    company_n, role_n = _norm(company), _norm(role)
+    for r in rows:
+        if not _loosely_equal(_norm(r["company"]), company_n):
+            continue
+        r_role = _norm(r["role"])
+        if (role_n or r_role) and not _loosely_equal(r_role, role_n):
+            continue
+        try:
+            gap = abs((datetime.fromisoformat(day) - datetime.fromisoformat(r["date_applied"])).days)
+        except ValueError:
+            continue
+        if gap <= DUPLICATE_WINDOW_DAYS:
+            return r
+    return None
+
+
+def _clean_date(value) -> str:
+    """Keep a YYYY-MM-DD the model returned; drop anything else."""
+    value = (value or "").strip()
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        return ""
+    return value
+
+
+def _fill_details(row: dict, extracted: dict):
+    for field in JOB_DETAIL_FIELDS:
+        if not row[field] and extracted.get(field):
+            row[field] = str(extracted[field]).strip()
+
+
 def record_email(rows: list[dict], email: dict, extracted: dict) -> tuple[str, dict]:
-    """Apply one classified email to rows. Returns ("added" | "updated", row)."""
+    """Apply one classified email to rows.
+    Returns ("added" | "updated" | "duplicate", row)."""
     status = EMAIL_TYPE_TO_STATUS[extracted["email_type"]]
     email_date = email["internal_date"].strftime("%Y-%m-%d")
+    is_next_step = status == STATUS_NEXT_ROUND
 
-    if status != STATUS_APPLIED:
+    if status == STATUS_APPLIED:
+        row = find_duplicate(rows, extracted.get("company"), extracted.get("role"), email_date)
+        if row is not None:
+            _fill_details(row, extracted)
+            return "duplicate", row
+    else:
         row = find_matching_row(rows, extracted.get("company"), extracted.get("role"))
         if row is not None:
             row["status"] = status
             row["status_updated"] = email_date
-            row["next_step_details"] = extracted.get("next_step_details") or ""
-            # Fill in anything the confirmation email didn't have.
-            for field in ("role", "job_id", "skills_required", "platform"):
-                if not row[field] and extracted.get(field):
-                    row[field] = extracted[field]
+            row["first_response_date"] = row["first_response_date"] or email_date
+            row["next_step_details"] = (extracted.get("next_step_details") or "") if is_next_step else row["next_step_details"]
+            row["next_step_type"] = (extracted.get("next_step_type") or "Other") if is_next_step else row["next_step_type"]
+            # A deadline only matters while the next step is open.
+            row["next_step_due"] = _clean_date(extracted.get("next_step_due")) if is_next_step else ""
+            _fill_details(row, extracted)
             return "updated", row
 
-    row = {
-            "company": extracted.get("company") or "",
-            "role": extracted.get("role") or "",
-            "job_id": extracted.get("job_id") or "",
-            "skills_required": extracted.get("skills_required") or "",
+    row = {field: "" for field in CSV_HEADERS}
+    _fill_details(row, extracted)
+    row.update(
+        {
             # For a status email with no logged application, the email date is
             # the best available stand-in for when it was applied.
             "date_applied": email_date,
-            "platform": extracted.get("platform") or "",
+            "company": extracted.get("company") or "",
             "status": status,
             "email_subject": email["subject"],
             "gmail_message_id": email["id"],
             "status_updated": email_date,
-            "next_step_details": extracted.get("next_step_details") or "",
-    }
+            "first_response_date": "" if status == STATUS_APPLIED else email_date,
+            "next_step_details": (extracted.get("next_step_details") or "") if is_next_step else "",
+            "next_step_type": (extracted.get("next_step_type") or "Other") if is_next_step else "",
+            "next_step_due": _clean_date(extracted.get("next_step_due")) if is_next_step else "",
+        }
+    )
     rows.append(row)
     return "added", row
 
@@ -529,7 +627,11 @@ def write_grouped_summary():
             via = f" via {r['platform']}" if r["platform"] else ""
             lines.append(f"  - Applied: {r['date_applied']}{via} — Status: {status}")
             if r["next_step_details"]:
-                lines.append(f"  - Next step: {r['next_step_details']}")
+                due = f" (due {r['next_step_due']})" if r["next_step_due"] else ""
+                lines.append(f"  - Next step: {r['next_step_details']}{due}")
+            job = ", ".join(x for x in (r["work_mode"], r["employment_type"], r["location"], r["salary"]) if x)
+            if job:
+                lines.append(f"  - Job: {job}")
             if r["skills_required"]:
                 lines.append(f"  - Skills: {r['skills_required']}")
         lines.append("")
@@ -544,6 +646,7 @@ def write_grouped_summary():
 STATUS_HEADINGS = [
     (STATUS_APPLIED, "Applied"),
     (STATUS_NEXT_ROUND, "Next round"),
+    (STATUS_OFFER, "Offer"),
     (STATUS_REJECTED, "Rejected"),
 ]
 
@@ -593,14 +696,33 @@ def _pretty_date(day: str) -> str:
 
 
 def build_reminder_email(row: dict) -> tuple[str, str]:
-    """Return (subject, body) for one application that moved to a next round."""
+    """Return (subject, body) for one application that moved to a next round
+    or got an offer."""
     what = row["role"] or "an application"
     company = row["company"] or "a company"
+    role_part = f" - {row['role']}" if row["role"] else ""
+    if row["status"] == STATUS_OFFER:
+        lines = [
+            f"{company} has made you an offer for {what}. Congratulations!",
+            "",
+            f"Received: {_pretty_date(row['status_updated'])}",
+            "Check the original email for the details and any reply-by date.",
+        ]
+        url = dashboard_url()
+        if url:
+            lines += ["", f"All your applications: {url}"]
+        return f"Offer from {company}{role_part}", "\n".join(lines)
+
     lines = [
         f"{company} has moved your application for {what} to the next round.",
         "",
         f"What to do: {row['next_step_details'] or 'See the email from ' + company + ' for details.'}",
     ]
+    if row["next_step_type"]:
+        lines.append(f"Type: {row['next_step_type']}")
+    if row["next_step_due"]:
+        label = "Interview date" if row["next_step_type"] == "Interview" else "Due by"
+        lines.append(f"{label}: {_pretty_date(row['next_step_due'])}")
     link = re.search(r"https?://[^\s)>\]]+", row["next_step_details"] or "")
     if link:
         lines.append(f"Link: {link.group(0)}")
@@ -608,14 +730,20 @@ def build_reminder_email(row: dict) -> tuple[str, str]:
         "",
         f"Received: {_pretty_date(row['status_updated'])}",
         f"Applied: {_pretty_date(row['date_applied'])}" + (f" via {row['platform']}" if row["platform"] else ""),
-        "",
-        "Assessments and surveys often expire within a few days, so check the "
-        "original email for a deadline.",
     ]
+    if not row["next_step_due"]:
+        note = (
+            "Check the original email for the interview date and time."
+            if row["next_step_type"] == "Interview"
+            else "Assessments and surveys often expire within a few days, so check the "
+            "original email for a deadline."
+        )
+        lines += ["", note]
     url = dashboard_url()
     if url:
         lines += ["", f"All your applications: {url}"]
-    return f"Action needed: next round at {company}" + (f" - {row['role']}" if row["role"] else ""), "\n".join(lines)
+    due = f" (due {_pretty_date(row['next_step_due'])})" if row["next_step_due"] and row["next_step_type"] != "Interview" else ""
+    return f"Action needed: next round at {company}{role_part}{due}", "\n".join(lines)
 
 
 def send_email(sender: str, subject: str, body: str) -> str | None:
@@ -655,7 +783,7 @@ def send_notifications(sender: str, updates: list[dict], rows: list[dict]):
     else:
         gh_annotation("notice", "Email sent", f"Summary of {len(updates)} update(s) sent")
 
-    reminders = [r for r in updates if r["status"] == STATUS_NEXT_ROUND]
+    reminders = [r for r in updates if r["status"] in (STATUS_NEXT_ROUND, STATUS_OFFER)]
     failed = []
     for row in reminders:
         error = send_email(sender, *build_reminder_email(row))
@@ -762,10 +890,11 @@ def main():
             action, row = record_email(rows, email, extracted)
             print(f"[debug] {msg_id}: {action} {row['company']} / {row['role'] or '?'} -> {row['status']}")
             # A row updated twice in one run (e.g. applied, then assessment)
-            # is reported once, with its latest status.
-            if not any(u is row for u in updates):
+            # is reported once, with its latest status. A repeat confirmation
+            # only fills in details, so it isn't news.
+            if action != "duplicate" and not any(u is row for u in updates):
                 updates.append(row)
-            changes += 1
+                changes += 1
         persist()
 
     # On a Gemini outage keep the old window so skipped emails are retried;

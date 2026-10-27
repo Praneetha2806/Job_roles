@@ -89,13 +89,17 @@ empty and every nightly run is a commit you can look back through:
    |---|---|---|
    | Confirmation | thank you, thank you for applying, thanks for applying, we have received your application | New row with status `Applied` |
    | Rejection | unfortunately, large volume, unable, not moving forward, we have decided, other candidate(s) | That application's row changes to `Rejected` |
-   | Next step | assessment, survey, next round, next step, interview, coding challenge, online test, HackerRank, CodeSignal | That application's row changes to `Next Round`, and the link is saved |
+   | Next step | assessment, survey, next round, next step, interview, coding challenge, online test, HackerRank, CodeSignal | That application's row changes to `Next Round`, with the step type, due date and link |
+   | Offer | offer letter, pleased to offer, job offer | That application's row changes to `Offer` |
 
    A rejection or next-step email is matched to an existing row by company,
    preferring the same role, then the most recent application. If no
    application was logged for that company, a new row is added with that
    status. Emails are handled oldest first, so a confirmation is logged
-   before a later rejection for the same job.
+   before a later rejection for the same job. A second confirmation for the
+   same company and role within 3 days (for example LinkedIn's "application
+   sent" plus the company's own email) only fills in missing details instead
+   of adding a duplicate row.
 4. **Save and commit.** Progress is saved after every email. The workflow
    commits the CSV, summary and state back to the repo, even if a run fails
    partway, so finished work is never lost.
@@ -103,8 +107,10 @@ empty and every nightly run is a commit you can look back through:
    - a summary of new applications, next rounds with their links,
      rejections, and overall totals, and
    - a separate **"Action needed: next round at <company>"** reminder for each
-     application that moved to a next round, with what to do, the link, and
-     the dates.
+     application that moved to a next round, with what to do, the type, the
+     due date or interview date when the email gives one, the link, and the
+     dates, and
+   - an **"Offer from <company>"** email for each offer.
 
 ### When a company replies to an earlier application
 
@@ -115,8 +121,8 @@ status, instead of adding a new row. The run commits the updated CSV to the
 `data` branch, and the dashboard is republished a minute or two later. Replies are picked up at the nightly run, or
 sooner if you run the workflow by hand.
 
-To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES` and
-`NEXT_STEP_PHRASES` near the top of `track_applications.py`.
+To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES`,
+`NEXT_STEP_PHRASES` and `OFFER_PHRASES` near the top of `track_applications.py`.
 
 ### `applications.csv` columns
 
@@ -126,20 +132,42 @@ To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES` and
 | `job_id`, `skills_required` | Only filled in when the email contains them; never guessed |
 | `date_applied` | Date of the confirmation email (or of the first status email, if no confirmation was found) |
 | `platform` | Where you applied, e.g. LinkedIn, Workday, Greenhouse |
-| `status` | `Applied`, `Next Round` or `Rejected` |
+| `status` | `Applied`, `Next Round`, `Offer` or `Rejected` |
 | `email_subject`, `gmail_message_id` | The email the row was created from |
 | `status_updated` | Date of the latest rejection or next-step email |
 | `next_step_details` | What to do next and the link, for next rounds |
+| `next_step_type` | `Assessment`, `Survey`, `Interview` or `Other` |
+| `next_step_due` | Deadline to complete the step, or the interview date (`YYYY-MM-DD`), when the email gives one |
+| `first_response_date` | Date of the first reply of any kind, used for reply-time measures |
+| `work_mode` | `Remote`, `Hybrid` or `On-site`, when mentioned |
+| `location` | Job location, when mentioned |
+| `employment_type` | `Full-time`, `Part-time`, `Contract`, `Internship` or `Temporary`, when mentioned |
+| `salary` | Pay or range as written in the email, when mentioned |
+
+The last seven columns were added later, so applications logged before then
+have them blank; they fill in for new emails.
 
 ## Dashboard
 
-`index.html` shows:
+`index.html` shows, top to bottom:
 
-- totals: applications, waiting to hear, next rounds, rejections, response rate
-- applications per day as a weekday × week matrix, with weekly totals
-- applications by company (sortable and searchable)
-- rejections so far, with days from applying to the rejection
-- next rounds, with the link from each email
+- **Totals:** applications, reply rate, next rounds, offers, rejections, and
+  applications with no reply after 2 weeks.
+- **Needs your attention:** open next rounds and offers, soonest deadline
+  first, with the step type, due date (highlighted when 3 days or less) and
+  the link.
+- **How your search is going:**
+  - a funnel from applied to reply, next round and offer, with the median
+    days to a reply
+  - applications still waiting, by how long ago you applied (0–7, 8–14,
+    15–30, 30+ days)
+  - applications sent and replies received per week
+  - applications per day as a weekday × week matrix
+- **What gets replies:** reply rate and next rounds by platform and by role
+  type (role titles grouped by keywords such as "Data Engineer" or
+  "Analyst"), plus work mode and employment type when emails mention them.
+- **All applications:** by company (sortable and searchable), and every
+  rejection with days from applying.
 
 The **Publish dashboard** workflow republishes it after every tracker run,
 with the latest `applications.csv` from the `data` branch. To turn it on:
@@ -260,10 +288,9 @@ to the first day you want tracked; otherwise it looks back 7 days.
 
 ## Ideas for later
 
-- Merge duplicate rows when both LinkedIn and the company's own system confirm
-  the same application.
-- Add an "Interview" status separate from assessments and surveys.
-- Add filters to the dashboard (date range, platform).
+- Add filters to the dashboard (date range, platform, role type).
+- Re-read older emails to fill in the newer columns for past applications.
+- A weekly digest of open next rounds whose due date is near.
 
 ## License
 
