@@ -138,9 +138,17 @@
 - **Data Scientist**
   - Applied: 2026-10-15 via Lever — Status: Applied
 
+## Apex Fintech Solutions (1)
+- **Unknown role**
+  - Applied: 2026-10-27 via Workday — Status: Applied
+
 ## APTNEXUS (1)
 - **Business Data Analyst**
   - Applied: 2026-10-22 via Rippling — Status: Applied
+
+## AQR (1)
+- **Data Scientist, Machine Learning**
+  - Applied: 2026-10-27 via Greenhouse — Status: Applied
 
 ## Artefact North America (1)
 - **Jr, AI and Data Consulting**
@@ -160,6 +168,10 @@
 - **Senior Cost Data Analyst**
   - Applied: 2026-10-16 via Dice — Status: Applied
 
+## Ascension (1)
+- **Clinical AI Data Scientist** — Job ID: 1316366
+  - Applied: 2026-10-27 — Status: Applied
+
 ## Astrana Health, Inc. (1)
 - **Data Engineer (Multiple Levels)**
   - Applied: 2026-10-23 via Pinpoint — Status: Applied
@@ -174,7 +186,7 @@
 
 ## Axon (1)
 - **Senior Machine Learning Scientist**
-  - Applied: 2026-10-26 — Status: Applied
+  - Applied: 2026-10-26 — Status: Rejected (updated 2026-10-27)
 
 ## Baptist Health (1)
 - **Unknown role**
@@ -206,7 +218,7 @@
 
 ## bet365 (1)
 - **Data Analyst**
-  - Applied: 2026-10-22 via SmartRecruiters — Status: Applied
+  - Applied: 2026-10-22 via SmartRecruiters — Status: Rejected (updated 2026-10-26)
 
 ## BLN24 (1)
 - **Unknown role**
@@ -215,6 +227,11 @@
 ## Blueera Technologies, Inc. (1)
 - **Data Engineer**
   - Applied: 2026-10-22 via LinkedIn — Status: Applied
+
+## Blueprint Manufacturing Co. (1)
+- **Unknown role** — Job ID: aa31bc4d-1e9b-417d-b7b8-b4f000047be4
+  - Applied: 2026-10-27 via PeopleMatter — Status: Next Round (updated 2026-10-27)
+  - Next step: Complete the application process by providing more information at https://my.peoplematter.com/mja/blueprint/JobApp/Identification?alias=blueprint&JobOpenings=aa31bc4d-1e9b-417d-b7b8-b4f000047be4&jappId=0ee0c7cf-4ee7-4875-b989-b4f000f5b2cd
 
 ## BMS (1)
 - **Data Scientist**
@@ -232,7 +249,7 @@
 - **Unknown role**
   - Applied: 2026-10-26 via Greenhouse — Status: Applied
 - **Data Engineer**
-  - Applied: 2026-10-26 — Status: Applied
+  - Applied: 2026-10-26 via Greenhouse — Status: Rejected (updated 2026-10-27)
 
 ## Brillfy Technology Inc (1)
 - **Remote AI Data Annotator** — Job ID: 4478466595
@@ -267,6 +284,14 @@
 ## CATCH Intelligence (1)
 - **Junior Data Scientist-LOCAL CANDIDATE ONLY**
   - Applied: 2026-10-20 via Arcoro — Status: Applied
+
+## Centerfield (1)
+- **Data Scientist**
+  - Applied: 2026-10-27 via Ashby — Status: Applied
+
+## Centric Software (1)
+- **Unknown role**
+  - Applied: 2026-10-27 via Workday — Status: Applied
 
 ## Cerity Partners (1)
 - **Client Data Analyst**
@@ -342,6 +367,10 @@
 - **Junior Data Analyst** — Job ID: 4478126266
   - Applied: 2026-10-13 via LinkedIn — Status: Applied
 
+## Crusoe (1)
+- **Data Scientist, Analytics**
+  - Applied: 2026-10-27 via Ashby — Status: Applied
+
 ## Cullerton Group (1)
 - **Data Scientist** — Job ID: 4479581590
   - Applied: 2026-10-15 via LinkedIn — Status: Applied
@@ -376,6 +405,11 @@
 - **Junior Data Analyst**
   - Applied: 2026-10-14 via Paycom — Status: Applied
 
+## DataVisor (1)
+- **Senior Data Scientist - Fraud Detection**
+  - Applied: 2026-10-27 via Workable — Status: Next Round (updated 2026-10-27)
+  - Next step: Fill in EEO form: https://datavisor-jobs.workable.com/candidates/yFFXy6m94loITPzxjJp0fN8w4huo0YkYmsOfM_Ft2J0/eeoc_profile/new?lng=en
+
 ## Decision Six Inc. (1)
 - **Data Analyst**
   - Applied: 2026-10-13 via Dice — Status: Applied
@@ -383,6 +417,10 @@
 ## Defense Technology Integration Llc (1)
 - **Data Analyst**
   - Applied: 2026-10-14 via ZipRecruiter — Status: Applied
+
+## Definitive Healthcare (1)
+- **Unknown role**
+  - Applied: 2026-10-27 via Greenhouse — Status: Applied
 
 ## DESRI (1)
 - **Analyst, Physical (Early Careers)**
@@ -406,6 +444,10 @@
 - **Unknown role** — Job ID: 26-30441
   - Applied: 2026-10-23 — Status: Applied
 
+## DiverseLynx (1)
+- **Unknown role** — Job ID: 26-30674
+  - Applied: 2026-10-27 — Status: Applied
+
 ## DLA Piper LLP (US) (1)
 - **Data Engineer** — Job ID: R2026-2915
   - Applied: 2026-10-23 via Workday — Status: Applied
@@ -418,6 +460,10 @@
 - **Unknown role**
   - Applied: 2026-10-23 via Workday — Status: Applied
 
+## East Texas A&M University (1)
+- **Data & Assessment Analyst** — Job ID: R-098350
+  - Applied: 2026-10-27 via Workday — Status: Applied
+
 ## Eccalon LLC (1)
 - **Machine Learning Engineer**
   - Applied: 2026-10-26 via ZipRecruiter — Status: Applied
@@ -425,6 +471,14 @@
 ## Econosoft (1)
 - **Senior Data Analyst**
   - Applied: 2026-10-15 via Dice — Status: Applied
+
+## Eliassen Group (2)
+- **Unknown role**
+  - Applied: 2026-10-27 — Status: Next Round (updated 2026-10-27)
+  - Next step: Please complete the voluntary EEO survey at https://email.gosnaphop.com/c/eJwczjFu7CAQANDT4M4rZvDCUlB86QspbaQcYIDBRrKxAzjnjzb9K15yr5zzxA6MVQDGvp7T5jgA0yLZIqIMqE20himFsCxSKuSpOJSoQaIBDXZ5PoLGaCRly1k_o1RikevZK13beT3ieUy728a4hPon0Av0kRpz6w_eC_XO9W0E-l2g74NGiQJ949juMkpdBXrm8_vmPspZu1A-0nFRWesnr6UPbpy-OrePJNR_ZcFQSq85IeIMkGEmBJolLqi1CjamODV3NarMY6P1ruNu93t8UNn_tj8OfwMAAP__nrJYWg
+- **Senior Data Scientist**
+  - Applied: 2026-10-27 via ZipRecruiter — Status: Next Round (updated 2026-10-27)
+  - Next step: Brief screening with Virtual Recruiter including a voice screening agent with questions specific to the job. When ready, click 'Start Screener'.
 
 ## Elmington (1)
 - **Unknown role**
@@ -451,6 +505,10 @@
 ## Encompass Supply Chain Solutions, Inc. (1)
 - **Web Analytics Analyst**
   - Applied: 2026-10-12 via Jobvite — Status: Applied
+
+## Engine (1)
+- **Senior Data Scientist - Content**
+  - Applied: 2026-10-27 — Status: Applied
 
 ## Entech Staffing Solutions (1)
 - **Junior Data Analyst - Hybrid**
@@ -489,6 +547,10 @@
 - **Data Scientist I**
   - Applied: 2026-10-12 — Status: Applied
 
+## eTeam (1)
+- **Unknown role** — Job ID: 26-43700
+  - Applied: 2026-10-27 — Status: Applied
+
 ## Everforth (3)
 - **Professional - Data Analyst I**
   - Applied: 2026-10-14 via Dice — Status: Applied
@@ -524,7 +586,7 @@
 
 ## FitMatch (1)
 - **Data Scientist**
-  - Applied: 2026-10-26 via Teamtailor — Status: Applied
+  - Applied: 2026-10-26 via Teamtailor — Status: Rejected (updated 2026-10-27)
 
 ## FLATTER INC (1)
 - **Unknown role**
@@ -560,9 +622,12 @@
 - **Training Systems and Data Specialist**
   - Applied: 2026-10-23 via Workday — Status: Applied
 
-## Generac (1)
+## Generac (2)
 - **Data Science Analyst**
   - Applied: 2026-10-12 via Workday — Status: Applied
+- **Intern AI Engineering**
+  - Applied: 2026-10-27 via Workday — Status: Applied
+  - Job: Internship
 
 ## Gentex Corporation (1)
 - **Data Scientist**
@@ -650,6 +715,10 @@
   - Applied: 2026-10-12 via Avature — Status: Next Round (updated 2026-10-19)
   - Next step: Complete IBM's recorded competency interview using the link: http://ibmglobal.avature.net/ltrk/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MTU0OTk4ODY4LCJoYXNoIjoiYjFlZTNiNDAzZjM0MjQwZDY2NTg1OGNlZTFmMzVjNTljNjFlYWY4MjU3MWM1NDgzZWU4YzRlNTZiN2Y5OGFhYSJ9.
 
+## Ibotta (1)
+- **Data Scientist, Strategic Partner Analytics**
+  - Applied: 2026-10-27 via Ashby — Status: Applied
+
 ## IBS Software (1)
 - **Data Annotator** — Job ID: 4480172164
   - Applied: 2026-10-16 via LinkedIn — Status: Applied
@@ -710,7 +779,7 @@
 
 ## Inspire Brands (1)
 - **leadership opportunity**
-  - Applied: 2026-10-20 via Workday — Status: Applied
+  - Applied: 2026-10-20 via Workday — Status: Rejected (updated 2026-10-27)
 
 ## Intapp (2)
 - **Unknown role**
@@ -754,9 +823,11 @@
 - **Associate Data Scientist**
   - Applied: 2026-10-22 via Dice — Status: Applied
 
-## Jerry.ai (1)
+## Jerry.ai (2)
 - **Associate Data Scientist**
   - Applied: 2026-10-20 via Ashby — Status: Applied
+- **Associate Data Scientist**
+  - Applied: 2026-10-27 via Ashby — Status: Applied
 
 ## JMARK Business Solutions, Inc. (1)
 - **Data and Analytics Integration Specialist II**
@@ -775,6 +846,10 @@
 ## Kani Solutions (1)
 - **Senior Data Analyst**
   - Applied: 2026-10-13 via Dice — Status: Applied
+
+## Kargo (1)
+- **Machine Learning Engineer**
+  - Applied: 2026-10-27 via Greenhouse — Status: Applied
 
 ## Kaygen Inc (1)
 - **Data Analyst**
@@ -839,13 +914,18 @@
 - **Data Scientist Sr - E3** — Job ID: 19865
   - Applied: 2026-10-20 via SuccessFactors — Status: Applied
 
+## Lorven Technologies Inc. (1)
+- **Data Scientist** — Job ID: 4483642806
+  - Applied: 2026-10-27 via LinkedIn — Status: Applied
+  - Job: Providence, RI
+
 ## Lumenalta (1)
-- **Unknown role**
-  - Applied: 2026-10-26 — Status: Applied
+- **Data Engineer - Senior Data Scientist**
+  - Applied: 2026-10-26 — Status: Rejected (updated 2026-10-28)
 
 ## Lunar Solar Group (1)
 - **Data Scientist**
-  - Applied: 2026-10-21 via Ashby — Status: Applied
+  - Applied: 2026-10-21 via Ashby — Status: Rejected (updated 2026-10-27)
 
 ## Machinify (1)
 - **Unknown role**
@@ -940,6 +1020,10 @@
 - **Sr Data Analyst**
   - Applied: 2026-10-16 via Dice — Status: Applied
 
+## Neara (1)
+- **Unknown role**
+  - Applied: 2026-10-27 via Ashby — Status: Applied
+
 ## Neotecra, Inc (1)
 - **Data Analyst – Security Operations**
   - Applied: 2026-10-13 via Dice — Status: Applied
@@ -1011,6 +1095,10 @@
   - Applied: 2026-10-14 via Dice — Status: Applied
 - **Graduate Business & Data Analyst**
   - Applied: 2026-10-14 via Dice — Status: Applied
+
+## Peerspace (1)
+- **Senior Data Scientist**
+  - Applied: 2026-10-27 via Lever — Status: Applied
 
 ## Pentangle Tech Services | P5 Group (1)
 - **Data Analyst – AI/ML** — Job ID: 4479084191
@@ -1095,6 +1183,10 @@
 ## Quantiphi (1)
 - **Analyst, AI Advisory** — Job ID: 4477070901
   - Applied: 2026-10-15 via LinkedIn — Status: Applied
+
+## Qventus (1)
+- **Senior Data Scientist**
+  - Applied: 2026-10-27 via Greenhouse — Status: Applied
 
 ## Randstad (2)
 - **Unknown role**
@@ -1217,6 +1309,10 @@
 - **Senior Data Analyst, Analytics**
   - Applied: 2026-10-26 — Status: Applied
 
+## Snap (1)
+- **Data Scientist, Level 4**
+  - Applied: 2026-10-27 via Workday — Status: Applied
+
 ## SoTalent (1)
 - **Data Engineer**
   - Applied: 2026-10-26 via LinkedIn — Status: Applied
@@ -1325,9 +1421,17 @@
 - **Unknown role** — Job ID: 26-03083
   - Applied: 2026-10-23 — Status: Applied
 
+## Tempus (1)
+- **Sr. Data Scientist, Outcomes Research**
+  - Applied: 2026-10-27 via Workday — Status: Applied
+
 ## Tenaska (1)
 - **Digital Infrastructure Analyst**
   - Applied: 2026-10-16 — Status: Applied
+
+## Tetra Tech, Inc. (1)
+- **Energy Analyst**
+  - Applied: 2026-10-27 — Status: Applied
 
 ## TexcelVision Inc. (1)
 - **Senior Data Analyst (only Local)**
@@ -1354,8 +1458,8 @@
   - Applied: 2026-10-22 via Rippling — Status: Applied
 
 ## Thermo Fisher Scientific (1)
-- **Unknown role** — Job ID: R-01372756
-  - Applied: 2026-10-23 via Workday — Status: Applied
+- **Data Engineer** — Job ID: R-01372756
+  - Applied: 2026-10-23 via Workday — Status: Rejected (updated 2026-10-27)
 
 ## Thompson HR Consulting (1)
 - **Data Analyst**
@@ -1374,6 +1478,10 @@
   - Applied: 2026-07-30 via Workday — Status: Applied
 - **Marketing Data Analyst**
   - Applied: 2026-08-01 via Workday — Status: Applied
+
+## TRM Labs (1)
+- **Senior Data Scientist, Knowledge Layer**
+  - Applied: 2026-10-27 — Status: Applied
 
 ## Troy Consulting LLC (1)
 - **Data Analyst** — Job ID: 4482736756
@@ -1394,14 +1502,19 @@
 ## U.S. Bank (2)
 - **Quantitative Model Analyst** — Job ID: 2026-0031649
   - Applied: 2026-10-20 via Workday — Status: Rejected (updated 2026-10-22)
-- **Quantitative Model Analyst 2**
-  - Applied: 2026-10-26 via Workday — Status: Applied
+- **Quantitative Model Analyst 2** — Job ID: 2026-0033084
+  - Applied: 2026-10-26 via Workday — Status: Rejected (updated 2026-10-28)
+  - Job: Cupertino, CA
 
 ## UCSF (2)
 - **Research Data Analyst I**
   - Applied: 2026-10-14 via Workday — Status: Applied
 - **Research Data Analyst I**
   - Applied: 2026-10-21 via Workday — Status: Applied
+
+## UL Solutions (1)
+- **Associate Sustainability Data Analyst** — Job ID: 11091
+  - Applied: 2026-10-27 — Status: Applied
 
 ## Uline (4)
 - **Unknown role**
@@ -1417,7 +1530,7 @@
 - **Programmer Analyst I** — Job ID: REQ20182166
   - Applied: 2026-10-22 via Workday — Status: Applied
 
-## Unknown (13)
+## Unknown (14)
 - **Unknown role** — Job ID: 26-25953
   - Applied: 2026-10-12 — Status: Applied
 - **Jr Data Quality Engineer**
@@ -1444,6 +1557,8 @@
   - Applied: 2026-10-26 — Status: Applied
 - **Content and Data Analyst**
   - Applied: 2026-10-26 via Dayforce — Status: Applied
+- **Admin Data Entry Analyst**
+  - Applied: 2026-10-27 via Indeed — Status: Applied
 
 ## Unum (1)
 - **Data Scientist II - CX Analytics**
@@ -1503,9 +1618,17 @@
 - **Data Scientist** — Job ID: R-028038
   - Applied: 2026-10-21 via Workday — Status: Applied
 
+## Wave (1)
+- **Unknown role**
+  - Applied: 2026-10-27 via Greenhouse — Status: Applied
+
 ## Waystar (1)
 - **Data Scientist**
   - Applied: 2026-10-24 via Workday — Status: Applied
+
+## Wayve (1)
+- **Unknown role**
+  - Applied: 2026-10-27 via Ashby — Status: Applied
 
 ## Weekday AI (1)
 - **Data Scientist** — Job ID: 6224975
@@ -1533,7 +1656,7 @@
 
 ## WSU Tech (2)
 - **Data Analyst**
-  - Applied: 2026-10-23 via Workable — Status: Applied
+  - Applied: 2026-10-23 via Workable — Status: Rejected (updated 2026-10-27)
 - **Data Analyst**
   - Applied: 2026-10-23 via Workable — Status: Applied
 
