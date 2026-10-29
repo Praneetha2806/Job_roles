@@ -243,7 +243,10 @@ scheduled interview, as YYYY-MM-DD. Work out relative deadlines ("within 4 days"
 
 Do not guess or invent values that are not actually present in the text.
 
-Respond with ONLY a JSON object, no other text, in this exact shape:
+Respond with ONLY JSON, no other text. Normally that is one object in the shape below. \
+If the email is about several different applications (e.g. "updates on your 3 \
+applications"), respond with a JSON array containing one such object per application.
+The object's exact shape:
 {{
   "email_type": "application_confirmation" | "rejection" | "next_step" | "offer" | "other",
   "company": "string or null",
@@ -439,7 +442,9 @@ def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
     raise LLMUnavailableError(str(last_error))
 
 
-def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
+def extract_with_llm(client: "genai.Client", email: dict) -> list[dict]:
+    """Classify one email. Returns one dict per application it is about
+    (usually one), leaving out anything that is not a tracked email type."""
     hits = keyword_hits(email)
     prompt = EXTRACTION_PROMPT.format(
         email_date=email["internal_date"].strftime("%Y-%m-%d (%A)"),
@@ -461,13 +466,19 @@ def extract_with_llm(client: "genai.Client", email: dict) -> dict | None:
         data = json.loads(text)
     except json.JSONDecodeError as e:
         print(f"  [debug] JSON parse failed: {e}")
-        return None
+        return []
 
-    if data.get("email_type") not in EMAIL_TYPE_TO_STATUS:
-        print(f"  [debug] Gemini classified this as {data.get('email_type')!r}; ignoring")
-        return None
-
-    return data
+    # Usually one object; an array when the email covers several applications.
+    items = data if isinstance(data, list) else [data]
+    results = []
+    for item in items:
+        if not isinstance(item, dict):
+            print(f"  [debug] ignoring non-object item in Gemini response: {item!r}")
+        elif item.get("email_type") not in EMAIL_TYPE_TO_STATUS:
+            print(f"  [debug] Gemini classified this as {item.get('email_type')!r}; ignoring")
+        else:
+            results.append(item)
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -512,16 +523,40 @@ def _loosely_equal(a: str, b: str) -> bool:
     return bool(a and b) and (a in b or b in a)
 
 
+_ROLE_ABBREVIATIONS = {"sr": "senior", "jr": "junior", "mgr": "manager", "eng": "engineer", "assoc": "associate"}
+
+
+def _role_words(role: str) -> set[str]:
+    words = re.findall(r"[a-z0-9]+", role.lower())
+    return {_ROLE_ABBREVIATIONS.get(w, w) for w in words}
+
+
+def _same_role(a: str, b: str) -> bool:
+    """Loose title match: one contains the other, or they share most words
+    ("Sr Data Analyst" ~ "Senior Data Analyst", but not "BI Analyst" ~ "Data Analyst")."""
+    if _loosely_equal(a, b):
+        return True
+    wa, wb = _role_words(a), _role_words(b)
+    return bool(wa and wb) and len(wa & wb) / len(wa | wb) >= 0.5
+
+
 def find_matching_row(rows: list[dict], company: str | None, role: str | None) -> dict | None:
-    """Find the logged application a status email refers to: same company,
-    preferring a matching role, most recently applied."""
+    """Find the logged application a status email refers to: same company and
+    a matching role, most recently applied. When the email names no role, or a
+    row has no role, the latest application at that company is used. When the
+    email names a role that differs from every logged one, there is no match
+    (a new row is added rather than updating a different job)."""
     company_n, role_n = _norm(company), _norm(role)
     same_company = [r for r in rows if _loosely_equal(_norm(r["company"]), company_n)]
     if not same_company:
         return None
-    same_role = [r for r in same_company if _loosely_equal(_norm(r["role"]), role_n)]
-    candidates = same_role or same_company
-    return max(candidates, key=lambda r: r["date_applied"])
+    if role_n:
+        candidates = [r for r in same_company if _same_role(_norm(r["role"]), role_n)]
+        if not candidates:
+            candidates = [r for r in same_company if not r["role"].strip()]
+    else:
+        candidates = same_company
+    return max(candidates, key=lambda r: r["date_applied"]) if candidates else None
 
 
 def find_duplicate(rows: list[dict], company: str | None, role: str | None, day: str) -> dict | None:
@@ -870,6 +905,7 @@ def main():
         save_state(state)
 
     updates = []
+    skipped = []
     for email in emails:
         msg_id = email["id"]
         try:
@@ -884,10 +920,17 @@ def main():
             )
             llm_failed = True
             break
+        except Exception as e:  # noqa: BLE001 - one odd email must not stop the run
+            extracted = []
+            skipped.append(f"{email['subject']!r} ({type(e).__name__}: {e})")
         processed_ids.add(msg_id)  # mark as seen regardless, to avoid reprocessing
 
-        if extracted is not None:
-            action, row = record_email(rows, email, extracted)
+        for item in extracted:
+            try:
+                action, row = record_email(rows, email, item)
+            except Exception as e:  # noqa: BLE001
+                skipped.append(f"{email['subject']!r} ({type(e).__name__}: {e})")
+                continue
             print(f"[debug] {msg_id}: {action} {row['company']} / {row['role'] or '?'} -> {row['status']}")
             # A row updated twice in one run (e.g. applied, then assessment)
             # is reported once, with its latest status. A repeat confirmation
@@ -896,6 +939,13 @@ def main():
                 updates.append(row)
                 changes += 1
         persist()
+
+    if skipped:
+        gh_annotation(
+            "warning",
+            "Skipped emails",
+            f"Could not process {len(skipped)} email(s); the rest were recorded. " + "; ".join(skipped)[:2000],
+        )
 
     # On a Gemini outage keep the old window so skipped emails are retried;
     # processed_ids prevents the ones already handled from being re-logged.
