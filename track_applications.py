@@ -39,6 +39,7 @@ import os
 import re
 import json
 import csv
+import io
 import base64
 import smtplib
 import sys
@@ -193,6 +194,12 @@ GMAIL_EXCLUDE = (
 # Tried in order; when the first is overloaded (503) or rate-limited, the
 # lighter model usually still has capacity.
 GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+# The SDK waits forever by default; a request that hangs counts as a failure
+# after this long, and the next model is tried.
+GEMINI_TIMEOUT_SECONDS = 90
+# A run stops taking new emails after this many minutes, saves its progress,
+# and leaves the rest for the next run (override with MAX_RUN_MINUTES).
+DEFAULT_MAX_RUN_MINUTES = 40
 
 EXTRACTION_PROMPT = """You are helping track the status of job applications from emails \
 (e.g. from LinkedIn, Indeed, Greenhouse, Lever, Workday, iCIMS, SmartRecruiters, Ashby, \
@@ -491,9 +498,17 @@ def load_state() -> dict:
     return {"last_run_utc": None, "processed_ids": []}
 
 
+def _write_atomically(path: Path, text: str):
+    """Write via a temporary file and rename, so a run cancelled mid-write
+    never leaves a half-written file behind."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, newline="")
+    os.replace(tmp, path)
+
+
 def save_state(state: dict):
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.write_text(json.dumps(state, indent=2))
+    _write_atomically(STATE_PATH, json.dumps(state, indent=2))
 
 
 def load_rows() -> list[dict]:
@@ -506,12 +521,12 @@ def load_rows() -> list[dict]:
 
 def save_rows(rows: list[dict]):
     """Write applications.csv grouped by company (then by date_applied)."""
-    CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
     rows.sort(key=lambda r: (r["company"].lower(), r["date_applied"]))
-    with CSV_PATH.open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
-        writer.writeheader()
-        writer.writerows(rows)
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=CSV_HEADERS)
+    writer.writeheader()
+    writer.writerows(rows)
+    _write_atomically(CSV_PATH, buf.getvalue())
 
 
 def _norm(text: str | None) -> str:
@@ -671,7 +686,7 @@ def write_grouped_summary():
                 lines.append(f"  - Skills: {r['skills_required']}")
         lines.append("")
 
-    SUMMARY_PATH.write_text("\n".join(lines))
+    _write_atomically(SUMMARY_PATH, "\n".join(lines))
 
 
 # ---------------------------------------------------------------------------
@@ -868,7 +883,11 @@ def main():
     gmail = get_gmail_service()
     mailbox = gmail.users().getProfile(userId="me").execute()["emailAddress"]
     gh_annotation("notice", "Mailbox", f"Scanning {mailbox}")
-    llm = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    llm = genai.Client(
+        api_key=os.environ["GEMINI_API_KEY"],
+        http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
+    )
+    max_minutes = float(os.environ.get("MAX_RUN_MINUTES") or DEFAULT_MAX_RUN_MINUTES)
 
     run_started = datetime.now(timezone.utc)
     candidate_ids = search_candidate_messages(gmail, since)
@@ -906,8 +925,18 @@ def main():
 
     updates = []
     skipped = []
-    for email in emails:
+    for done, email in enumerate(emails):
         msg_id = email["id"]
+        if (datetime.now(timezone.utc) - run_started).total_seconds() > max_minutes * 60:
+            # Held back like a Gemini outage, so the rest are picked up next run.
+            gh_annotation(
+                "notice",
+                "Time limit reached",
+                f"Stopped after {max_minutes:g} minutes with {len(emails) - done} of "
+                f"{len(emails)} emails left; the next run continues from here.",
+            )
+            llm_failed = True
+            break
         try:
             extracted = extract_with_llm(llm, email)
         except LLMUnavailableError as e:
