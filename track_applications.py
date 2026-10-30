@@ -224,10 +224,14 @@ Classify the email as exactly one email_type:
 "Unfortunately...", "due to the large volume of applications", "we are unable to...", \
 "not moving forward", "decided to pursue other candidates").
 - "next_step": the candidate is being taken forward, e.g. an online assessment, \
-coding challenge, survey/questionnaire to complete, or an interview invitation/scheduling.
+coding challenge, survey/questionnaire to complete, or an interview invitation/scheduling. \
+A reminder to complete a step that was already requested is still "next_step".
 - "offer": the company is offering the candidate the job.
 - "other": anything else (newsletters, job-alert digests, recommendations, marketing, \
 account/security emails, or emails not about a specific application by the candidate).
+
+An email that only confirms the candidate finished a step ("Thank you for completing \
+the assessment", "We received your responses") is "other", since nothing new is asked.
 
 Keywords are only hints: "thank you" also appears in rejections, and "unable" or \
 "survey" can appear in unrelated emails. Decide based on the overall meaning.
@@ -603,15 +607,50 @@ def _clean_date(value) -> str:
     return value
 
 
+# Placeholder values the model sometimes returns instead of null.
+_NOT_STATED = {"unknown", "unknown role", "unknown company", "n/a", "na", "none", "null", "not specified", "not stated"}
+
+
+def _value(extracted: dict, field: str) -> str:
+    value = str(extracted.get(field) or "").strip()
+    return "" if value.lower() in _NOT_STATED else value
+
+
 def _fill_details(row: dict, extracted: dict):
     for field in JOB_DETAIL_FIELDS:
-        if not row[field] and extracted.get(field):
-            row[field] = str(extracted[field]).strip()
+        if not row[field] and _value(extracted, field):
+            row[field] = _value(extracted, field)
+
+
+def _link_host(text: str) -> str:
+    m = re.search(r"https?://([^/\s)>\]]+)", text or "")
+    return m.group(1).lower() if m else ""
+
+
+def _is_same_step(row: dict, step_type: str, details: str, due: str) -> bool:
+    """Whether a next-step email repeats the step this row already has (a
+    reminder or follow-up), rather than asking for something new. New means:
+    a different step type, a link to a different site, or a changed date."""
+    if row["status"] != STATUS_NEXT_ROUND:
+        return False
+    # Rows logged before step types were recorded have none; don't treat that as a change.
+    if row["next_step_type"] and step_type != row["next_step_type"]:
+        return False
+    old_host, new_host = _link_host(row["next_step_details"]), _link_host(details)
+    if old_host and new_host and old_host != new_host:
+        return False
+    if due and due != row["next_step_due"]:
+        # An interview being scheduled or moved always matters; for other steps
+        # only a changed deadline does (a first-seen one is just filled in).
+        if step_type == "Interview" or row["next_step_due"]:
+            return False
+    return True
 
 
 def record_email(rows: list[dict], email: dict, extracted: dict) -> tuple[str, dict]:
     """Apply one classified email to rows.
-    Returns ("added" | "updated" | "duplicate", row)."""
+    Returns ("added" | "updated" | "duplicate" | "repeat", row); a duplicate
+    confirmation or a repeat of an open next step is not news."""
     status = EMAIL_TYPE_TO_STATUS[extracted["email_type"]]
     email_date = email["internal_date"].strftime("%Y-%m-%d")
     is_next_step = status == STATUS_NEXT_ROUND
@@ -623,6 +662,16 @@ def record_email(rows: list[dict], email: dict, extracted: dict) -> tuple[str, d
             return "duplicate", row
     else:
         row = find_matching_row(rows, extracted.get("company"), extracted.get("role"))
+        if row is not None and is_next_step:
+            step_type = _value(extracted, "next_step_type") or "Other"
+            details = _value(extracted, "next_step_details")
+            due = _clean_date(extracted.get("next_step_due"))
+            if _is_same_step(row, step_type, details, due):
+                # Keep the original step and date; only fill in what was missing.
+                row["next_step_details"] = row["next_step_details"] or details
+                row["next_step_due"] = row["next_step_due"] or due
+                _fill_details(row, extracted)
+                return "repeat", row
         if row is not None:
             row["status"] = status
             row["status_updated"] = email_date
@@ -641,7 +690,7 @@ def record_email(rows: list[dict], email: dict, extracted: dict) -> tuple[str, d
             # For a status email with no logged application, the email date is
             # the best available stand-in for when it was applied.
             "date_applied": email_date,
-            "company": extracted.get("company") or "",
+            "company": _value(extracted, "company"),
             "status": status,
             "email_subject": email["subject"],
             "gmail_message_id": email["id"],
@@ -964,7 +1013,7 @@ def main():
             # A row updated twice in one run (e.g. applied, then assessment)
             # is reported once, with its latest status. A repeat confirmation
             # only fills in details, so it isn't news.
-            if action != "duplicate" and not any(u is row for u in updates):
+            if action not in ("duplicate", "repeat") and not any(u is row for u in updates):
                 updates.append(row)
                 changes += 1
         persist()
