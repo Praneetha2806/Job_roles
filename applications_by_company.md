@@ -4,6 +4,12 @@
 - **Data Test Analyst I**
   - Applied: 2026-10-21 via Company Careers Page — Status: Applied
 
+## a company (1)
+- **Python Statistical Data Engineer**
+  - Applied: 2026-10-29 — Status: Next Round (updated 2026-10-29)
+  - Next step: Candidates will analyze a millions-of-records dataset containing missing values, outliers, inconsistencies, distribution shifts, correlated variables, and anomalous groups. The candidate must clean and validate the data, detect anomalies, perform statistical analysis, identify key factors, create Seaborn visualizations, document findings, and provide engineering recommendations.
+  - Skills: Python, Seaborn
+
 ## AAA (1)
 - **Data Scientist 1**
   - Applied: 2026-10-15 via Workday — Status: Rejected (updated 2026-10-25)
@@ -268,7 +274,7 @@
 
 ## Blueprint Manufacturing Co. (1)
 - **Unknown role** — Job ID: aa31bc4d-1e9b-417d-b7b8-b4f000047be4
-  - Applied: 2026-10-27 via PeopleMatter — Status: Next Round (updated 2026-10-28)
+  - Applied: 2026-10-27 via PeopleMatter — Status: Next Round (updated 2026-10-29)
   - Next step: Complete the application process by providing more information at https://my.peoplematter.com/mja/blueprint/JobApp/Identification?alias=blueprint&JobOpenings=aa31bc4d-1e9b-417d-b7b8-b4f000047be4&jappId=0ee0c7cf-4ee7-4875-b989-b4f000f5b2cd
 
 ## BMS (2)
@@ -312,8 +318,8 @@
   - Applied: 2026-10-28 via Greenhouse — Status: Rejected (updated 2026-10-28)
 
 ## Cambium Learning (1)
-- **Unknown role**
-  - Applied: 2026-10-26 via Workday — Status: Applied
+- **Data Analyst I**
+  - Applied: 2026-10-26 via Workday — Status: Rejected (updated 2026-10-30)
 
 ## Canoe Intelligence (2)
 - **Data Analyst, Asset Data**
@@ -473,7 +479,7 @@
 
 ## DataVisor (1)
 - **Senior Data Scientist - Fraud Detection**
-  - Applied: 2026-10-27 via Workable — Status: Next Round (updated 2026-10-28)
+  - Applied: 2026-10-27 via Workable — Status: Next Round (updated 2026-10-29)
   - Next step: Fill in EEO form: https://datavisor-jobs.workable.com/candidates/yFFXy6m94loITPzxjJp0fN8w4huo0YkYmsOfM_Ft2J0/eeoc_profile/new?lng=en
 
 ## Dealer Tire (1)
@@ -556,10 +562,10 @@
 
 ## Eliassen Group (2)
 - **Unknown role**
-  - Applied: 2026-10-27 — Status: Next Round (updated 2026-10-28)
+  - Applied: 2026-10-27 — Status: Next Round (updated 2026-10-29)
   - Next step: Please complete the voluntary EEO survey at https://email.gosnaphop.com/c/eJwczjFu7CAQANDT4M4rZvDCUlB86QspbaQcYIDBRrKxAzjnjzb9K15yr5zzxA6MVQDGvp7T5jgA0yLZIqIMqE20himFsCxSKuSpOJSoQaIBDXZ5PoLGaCRly1k_o1RikevZK13beT3ieUy728a4hPon0Av0kRpz6w_eC_XO9W0E-l2g74NGiQJ949juMkpdBXrm8_vmPspZu1A-0nFRWesnr6UPbpy-OrePJNR_ZcFQSq85IeIMkGEmBJolLqi1CjamODV3NarMY6P1ruNu93t8UNn_tj8OfwMAAP__nrJYWg
 - **Senior Data Scientist**
-  - Applied: 2026-10-27 via ZipRecruiter — Status: Next Round (updated 2026-10-28)
+  - Applied: 2026-10-27 via ZipRecruiter — Status: Next Round (updated 2026-10-29)
   - Next step: Complete a brief screening with our Virtual Recruiter (voice screening agent with questions specific to the job).
 
 ## Elmington (1)
@@ -597,7 +603,7 @@
 
 ## Engine (1)
 - **Senior Data Scientist - Content**
-  - Applied: 2026-10-27 — Status: Applied
+  - Applied: 2026-10-27 — Status: Rejected (updated 2026-10-30)
 
 ## Entech Staffing Solutions (1)
 - **Junior Data Analyst - Hybrid**
@@ -668,8 +674,8 @@
 
 ## Experian (1)
 - **Senior Data Scientist, Fraud Risk Detection**
-  - Applied: 2026-10-28 via SmartRecruiters — Status: Next Round (updated 2026-10-29)
-  - Next step: Online assessment invitation
+  - Applied: 2026-10-28 via SmartRecruiters — Status: Next Round (updated 2026-10-30)
+  - Next step: Complete the online assessment for your application at Experian. (due 2026-11-03)
 
 ## Expert Technology Services (1)
 - **Data Analyst - IT III**
@@ -1533,7 +1539,7 @@
 
 ## Snap (1)
 - **Data Scientist, Level 4**
-  - Applied: 2026-10-27 via Workday — Status: Applied
+  - Applied: 2026-10-27 via Workday — Status: Rejected (updated 2026-10-30)
 
 ## SoTalent (1)
 - **Data Engineer**
@@ -1681,8 +1687,8 @@
 
 ## The Fountain Group (1)
 - **Data Analyst**
-  - Applied: 2026-10-29 via LinkedIn — Status: Next Round (updated 2026-10-29)
-  - Next step: I will be calling you to gather more details about your profile. If you are unable to take the call at this time, please let me know your preferred date and time for a call, and I will call you accordingly.
+  - Applied: 2026-10-29 via LinkedIn — Status: Next Round (updated 2026-10-30)
+  - Next step: I will be calling you to gather more details about your profile. If you are unable to take the call at this time, please let me know your preferred date and time for a call.
   - Job: On-site, Contract, Fort Worth, TX, $26-25
   - Skills: Excel data and reporting skills, Analytical skills, Strong communication skills
 
@@ -1793,7 +1799,7 @@
 - **Data Science Analyst II** — Job ID: R_00045655
   - Applied: 2026-10-28 via Workday — Status: Applied
 
-## Unknown (18)
+## Unknown (20)
 - **Unknown role** — Job ID: 26-25953
   - Applied: 2026-10-12 — Status: Applied
 - **Jr Data Quality Engineer**
@@ -1833,6 +1839,16 @@
   - Applied: 2026-10-29 via Indeed — Status: Applied
 - **Unknown role** — Job ID: 26-44547
   - Applied: 2026-10-29 — Status: Applied
+- **Python Statistical Data Engineer**
+  - Applied: 2026-10-30 — Status: Next Round (updated 2026-10-30)
+  - Next step: Candidates will analyze a millions-of-records dataset containing missing values, outliers, inconsistencies, distribution shifts, correlated variables, and anomalous groups. The candidate must clean and validate the data, detect anomalies, perform statistical analysis, identify key factors, create Seaborn visualizations, document findings, and provide engineering recommendations.
+  - Job: Remote, Contract, $93K/Annum
+  - Skills: Python, Pandas, NumPy, Seaborn, Matplotlib, PyTorch, Statistics, probability, correlation, regression, hypothesis testing, Anomaly/outlier detection, data-quality analysis, Feature engineering, SQL, Git, pytest
+- **Python Statistical Data Engineer**
+  - Applied: 2026-10-30 — Status: Next Round (updated 2026-10-30)
+  - Next step: Could you please share your updated resume?
+  - Job: Remote, Contract, $93K/Annum
+  - Skills: Python, Pandas, NumPy, Seaborn, Matplotlib, Statistics, probability, correlation, regression, hypothesis testing, Anomaly/outlier detection, data-quality analysis, Feature engineering, SQL, PyTorch, Git, pytest
 
 ## Unlearn (1)
 - **Clinical Data Scientist**
