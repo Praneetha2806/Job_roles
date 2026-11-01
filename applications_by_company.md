@@ -6,8 +6,8 @@
 
 ## a company (1)
 - **Python Statistical Data Engineer**
-  - Applied: 2026-10-29 — Status: Next Round (updated 2026-10-30)
-  - Next step: Could you please share your updated resume?
+  - Applied: 2026-10-29 — Status: Next Round (updated 2026-10-31)
+  - Next step: Candidates will analyze a millions-of-records dataset containing missing values, outliers, inconsistencies, distribution shifts, correlated variables, and anomalous groups.
   - Skills: Python, Seaborn
 
 ## AAA (1)
@@ -234,7 +234,7 @@
 
 ## Avanciers Inc. (1)
 - **Senior Data Scientist**
-  - Applied: 2026-10-28 via LinkedIn — Status: Applied
+  - Applied: 2026-10-28 via LinkedIn — Status: Rejected (updated 2026-10-31)
   - Job: United States
 
 ## AWG (1)
@@ -295,7 +295,7 @@
 
 ## Blueprint Manufacturing Co. (1)
 - **Unknown role** — Job ID: aa31bc4d-1e9b-417d-b7b8-b4f000047be4
-  - Applied: 2026-10-27 via PeopleMatter — Status: Next Round (updated 2026-10-30)
+  - Applied: 2026-10-27 via PeopleMatter — Status: Next Round (updated 2026-10-31)
   - Next step: Complete the application process by providing more information at https://my.peoplematter.com/mja/blueprint/JobApp/Identification?alias=blueprint&JobOpenings=aa31bc4d-1e9b-417d-b7b8-b4f000047be4&jappId=0ee0c7cf-4ee7-4875-b989-b4f000f5b2cd
 
 ## BMS (2)
@@ -374,7 +374,7 @@
 
 ## CharterUP (1)
 - **Data Analyst**
-  - Applied: 2026-10-29 via Greenhouse — Status: Applied
+  - Applied: 2026-10-29 via Greenhouse — Status: Rejected (updated 2026-10-31)
 
 ## Chartmetric (1)
 - **Data Engineer**
@@ -506,7 +506,7 @@
 
 ## DataVisor (1)
 - **Senior Data Scientist - Fraud Detection**
-  - Applied: 2026-10-27 via Workable — Status: Next Round (updated 2026-10-30)
+  - Applied: 2026-10-27 via Workable — Status: Next Round (updated 2026-10-31)
   - Next step: Fill in EEO form: https://datavisor-jobs.workable.com/candidates/yFFXy6m94loITPzxjJp0fN8w4huo0YkYmsOfM_Ft2J0/eeoc_profile/new?lng=en
 
 ## Dealer Tire (1)
@@ -598,10 +598,10 @@
 
 ## Eliassen Group (2)
 - **Unknown role**
-  - Applied: 2026-10-27 — Status: Next Round (updated 2026-10-30)
+  - Applied: 2026-10-27 — Status: Next Round (updated 2026-10-31)
   - Next step: Please complete the voluntary EEO survey at https://email.gosnaphop.com/c/eJwczjFu7CAQANDT4M4rZvDCUlB86QspbaQcYIDBRrKxAzjnjzb9K15yr5zzxA6MVQDGvp7T5jgA0yLZIqIMqE20himFsCxSKuSpOJSoQaIBDXZ5PoLGaCRly1k_o1RikevZK13beT3ieUy728a4hPon0Av0kRpz6w_eC_XO9W0E-l2g74NGiQJ949juMkpdBXrm8_vmPspZu1A-0nFRWesnr6UPbpy-OrePJNR_ZcFQSq85IeIMkGEmBJolLqi1CjamODV3NarMY6P1ruNu93t8UNn_tj8OfwMAAP__nrJYWg
 - **Senior Data Scientist**
-  - Applied: 2026-10-27 via ZipRecruiter — Status: Next Round (updated 2026-10-30)
+  - Applied: 2026-10-27 via ZipRecruiter — Status: Next Round (updated 2026-10-31)
   - Next step: Complete a brief screening with our Virtual Recruiter (voice screening agent with questions specific to the job).
 
 ## Elmington (1)
@@ -713,8 +713,8 @@
 
 ## Experian (1)
 - **Senior Data Scientist, Fraud Risk Detection**
-  - Applied: 2026-10-28 via SmartRecruiters — Status: Next Round (updated 2026-10-30)
-  - Next step: Complete the online assessment for your application at Experian. (due 2026-11-03)
+  - Applied: 2026-10-28 via SmartRecruiters — Status: Next Round (updated 2026-11-01)
+  - Next step: Complete the online assessment for your application at Experian. Deadline: You have 2 days left to complete the (due 2026-11-03)
 
 ## Expert Technology Services (1)
 - **Data Analyst - IT III**
@@ -1323,7 +1323,7 @@
 
 ## Paladin Consulting (1)
 - **Data Scientist (Pricing/Financial)**
-  - Applied: 2026-10-28 via LinkedIn — Status: Applied
+  - Applied: 2026-10-28 via LinkedIn — Status: Rejected (updated 2026-10-31)
   - Job: The Woodlands, TX
 
 ## Palantir Technologies (1)
@@ -1372,7 +1372,7 @@
 
 ## Planet Reimagined (1)
 - **Machine Learning Engineer / Data Scientist - Climate and Energy Policy**
-  - Applied: 2026-10-28 via applytojob.com — Status: Applied
+  - Applied: 2026-10-28 via applytojob.com — Status: Rejected (updated 2026-10-31)
 
 ## Player 15 Group (1)
 - **Data Analyst, Strategy & Analytics**
@@ -1795,7 +1795,7 @@
 ## The Fountain Group (1)
 - **Data Analyst**
   - Applied: 2026-10-29 via LinkedIn — Status: Next Round (updated 2026-10-31)
-  - Next step: Brief call scheduled for Monday 11am pst (due 2026-11-02)
+  - Next step: Call scheduled with Morgan JD API for 11/02 at 11:00 AM PT (due 2026-11-02)
   - Job: On-site, Contract, Fort Worth, TX, $26-25
   - Skills: Excel data and reporting skills, Analytical skills, Strong communication skills
 
@@ -2112,6 +2112,10 @@
 ## ZipStaff Inc. (1)
 - **Senior Data Analyst**
   - Applied: 2026-10-13 via ZipRecruiter — Status: Applied
+
+## Zoom (1)
+- **Data Scientist**
+  - Applied: 2026-11-01 via Workday — Status: Applied
 
 ## Zoom Communications (1)
 - **Data Scientist**
