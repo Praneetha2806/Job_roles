@@ -1040,6 +1040,11 @@
 - **Business Intelligence Data Analyst** — Job ID: R49569
   - Applied: 2026-10-15 via Workday — Status: Applied
 
+## iAdeptive Technologies (1)
+- **ML Engineer** — Job ID: 4475897205
+  - Applied: 2026-11-04 via LinkedIn — Status: Applied
+  - Job: Columbia, MD
+
 ## IBM (1)
 - **Data Engineer** — Job ID: 127183
   - Applied: 2026-10-12 via Avature — Status: Next Round (updated 2026-10-19)
@@ -1132,6 +1137,10 @@
 ## Intellicess Inc. (1)
 - **Drilling Data Scientist**
   - Applied: 2026-10-16 via LinkedIn — Status: Applied
+
+## Intelliswift (1)
+- **Unknown role** — Job ID: 26-04838
+  - Applied: 2026-11-04 — Status: Applied
 
 ## Interchecks (1)
 - **Unknown role**
@@ -1599,6 +1608,10 @@
 ## Prominds Business Consulting Inc (1)
 - **Technical Data Analyst**
   - Applied: 2026-10-13 via Dice — Status: Applied
+
+## Prominence Advisors (1)
+- **Data Engineer** — Job ID: 5160745
+  - Applied: 2026-11-04 via Workable — Status: Applied
 
 ## Prosper (1)
 - **Data Scientist, Credit Risk Analytics**
