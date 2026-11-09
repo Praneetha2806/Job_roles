@@ -54,7 +54,12 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-import httpx
+# google-genai 3.x uses httpx2 (same API, new name); 2.x uses httpx. Only the
+# network error classes are needed, to retry dropped connections.
+try:
+    import httpx2 as httpx
+except ImportError:
+    import httpx
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
@@ -769,8 +774,12 @@ def build_summary_email(updates: list[dict], rows: list[dict]) -> tuple[str, str
         lines.append(f"{heading} ({len(group)}):")
         for r in group:
             lines.append(f"  - {r['company'] or 'Unknown company'} - {r['role'] or 'Unknown role'}")
-            if r["next_step_details"]:
-                lines.append(f"      Next step: {r['next_step_details']}")
+            if status == STATUS_NEXT_ROUND:
+                date_label = "interview" if r["next_step_type"] == "Interview" else "deadline"
+                due = _pretty_date(r["next_step_due"]) if r["next_step_due"] else "not stated"
+                lines.append(f"      Email received {_pretty_date(r['status_updated'])}; {date_label}: {due}")
+                if r["next_step_details"]:
+                    lines.append(f"      Next step: {r['next_step_details']}")
         lines.append("")
 
     totals = " / ".join(
@@ -820,36 +829,41 @@ def build_reminder_email(row: dict) -> tuple[str, str]:
             lines += ["", f"All your applications: {url}"]
         return f"Offer from {company}{role_part}", "\n".join(lines)
 
+    is_interview = row["next_step_type"] == "Interview"
+    date_label = "Interview date" if is_interview else "Deadline"
     lines = [
         f"{company} has moved your application for {what} to the next round.",
+        "",
+        f"Email received: {_pretty_date(row['status_updated'])}",
+        f"{date_label}: " + (_pretty_date(row["next_step_due"]) if row["next_step_due"] else "not stated in the email"),
         "",
         f"What to do: {row['next_step_details'] or 'See the email from ' + company + ' for details.'}",
     ]
     if row["next_step_type"]:
         lines.append(f"Type: {row['next_step_type']}")
-    if row["next_step_due"]:
-        label = "Interview date" if row["next_step_type"] == "Interview" else "Due by"
-        lines.append(f"{label}: {_pretty_date(row['next_step_due'])}")
     link = re.search(r"https?://[^\s)>\]]+", row["next_step_details"] or "")
     if link:
         lines.append(f"Link: {link.group(0)}")
+    lines.append(
+        f"Applied: {_pretty_date(row['date_applied'])}" + (f" via {row['platform']}" if row["platform"] else "")
+    )
+    if not row["next_step_due"]:
+        lines += [
+            "",
+            "Check the original email for the interview date and time."
+            if is_interview
+            else "Assessments and surveys often expire within a few days, so check the original email.",
+        ]
     lines += [
         "",
-        f"Received: {_pretty_date(row['status_updated'])}",
-        f"Applied: {_pretty_date(row['date_applied'])}" + (f" via {row['platform']}" if row["platform"] else ""),
+        "You get this email once per step. Follow-up emails about the same step "
+        "won't send another; a new step, a new interview date or a changed "
+        "deadline will.",
     ]
-    if not row["next_step_due"]:
-        note = (
-            "Check the original email for the interview date and time."
-            if row["next_step_type"] == "Interview"
-            else "Assessments and surveys often expire within a few days, so check the "
-            "original email for a deadline."
-        )
-        lines += ["", note]
     url = dashboard_url()
     if url:
         lines += ["", f"All your applications: {url}"]
-    due = f" (due {_pretty_date(row['next_step_due'])})" if row["next_step_due"] and row["next_step_type"] != "Interview" else ""
+    due = f" (due {_pretty_date(row['next_step_due'])})" if row["next_step_due"] and not is_interview else ""
     return f"Action needed: next round at {company}{role_part}{due}", "\n".join(lines)
 
 
