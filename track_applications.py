@@ -439,6 +439,7 @@ def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
     """Call Gemini, falling back across GEMINI_MODELS and backing off on
     rate-limit / overload errors (common on the free tier)."""
     for attempt in range(attempts):
+        errors_by_model = {}
         for model in GEMINI_MODELS:
             try:
                 return client.models.generate_content(
@@ -457,13 +458,14 @@ def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
             except (genai_errors.ServerError, httpx.HTTPError) as e:
                 # httpx.HTTPError covers dropped connections mid-request.
                 last_error = e
+            errors_by_model[model] = str(last_error)[:300]
             print(f"  [debug] Gemini {model} error ({last_error})")
         if attempt == attempts - 1:
             break
         wait = 15 * (attempt + 1)
         print(f"  [debug] all Gemini models failed; retrying in {wait}s")
         time.sleep(wait)
-    raise LLMUnavailableError(str(last_error))
+    raise LLMUnavailableError("; ".join(f"{m}: {e}" for m, e in errors_by_model.items()))
 
 
 def extract_with_llm(client: "genai.Client", email: dict) -> list[dict]:
@@ -956,7 +958,9 @@ def main():
     gh_annotation("notice", "Mailbox", f"Scanning {mailbox}")
     llm = genai.Client(
         api_key=os.environ["GEMINI_API_KEY"],
-        http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
+        # google-genai 3.x defaults to the v1 API, which doesn't serve the
+        # "-latest" model aliases; 2.x used v1beta.
+        http_options=genai_types.HttpOptions(api_version="v1beta", timeout=GEMINI_TIMEOUT_SECONDS * 1000),
     )
     max_minutes = float(os.environ.get("MAX_RUN_MINUTES") or DEFAULT_MAX_RUN_MINUTES)
 
