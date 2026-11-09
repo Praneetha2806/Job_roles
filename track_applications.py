@@ -288,12 +288,19 @@ REQUIRED_ENV_VARS = [
 ]
 
 
+def fatal(title: str, message: str):
+    """Stop the run with an error shown on the Actions run page, not only in the log."""
+    gh_annotation("error", title, message)
+    sys.exit(f"ERROR: {message}")
+
+
 def check_env():
     missing = [name for name in REQUIRED_ENV_VARS if not os.environ.get(name)]
     if missing:
-        sys.exit(
-            f"ERROR: missing required environment variable(s): {', '.join(missing)}. "
-            "Add them under Settings -> Secrets and variables -> Actions."
+        fatal(
+            "Missing secrets",
+            f"Missing required secret(s): {', '.join(missing)}. "
+            "Add them under Settings -> Secrets and variables -> Actions.",
         )
 
 
@@ -309,14 +316,15 @@ def get_gmail_service():
     try:
         creds.refresh(Request())
     except RefreshError as e:
-        sys.exit(
-            f"ERROR: Gmail OAuth refresh failed: {e}\n"
+        fatal(
+            "Gmail sign-in failed",
+            f"Gmail OAuth refresh failed: {e}. "
             "Check the GMAIL_* secrets. Most often (invalid_grant) the refresh "
             "token has expired or been revoked: if your "
             "Google Cloud OAuth consent screen is in 'Testing' mode, refresh tokens "
             "expire after 7 days -- set it to 'In production' (Google Auth Platform "
             "-> Audience -> Publish app), then run get_refresh_token.py locally and "
-            "update the GMAIL_REFRESH_TOKEN secret."
+            "update the GMAIL_REFRESH_TOKEN secret.",
         )
     return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
@@ -903,7 +911,7 @@ def parse_start_date(value: str) -> datetime:
     try:
         return datetime.strptime(value.strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc)
     except ValueError:
-        sys.exit(f"ERROR: start date {value!r} is not a date like 2026-10-01 (YYYY-MM-DD).")
+        fatal("Bad start date", f"Start date {value!r} is not a date like 2026-10-01 (YYYY-MM-DD).")
 
 
 def main():
