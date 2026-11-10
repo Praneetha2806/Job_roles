@@ -54,7 +54,12 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-import httpx
+# google-genai 3.x uses httpx2 (same API, new name); 2.x uses httpx. Only the
+# network error classes are needed, to retry dropped connections.
+try:
+    import httpx2 as httpx
+except ImportError:
+    import httpx
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
@@ -224,10 +229,14 @@ Classify the email as exactly one email_type:
 "Unfortunately...", "due to the large volume of applications", "we are unable to...", \
 "not moving forward", "decided to pursue other candidates").
 - "next_step": the candidate is being taken forward, e.g. an online assessment, \
-coding challenge, survey/questionnaire to complete, or an interview invitation/scheduling.
+coding challenge, survey/questionnaire to complete, or an interview invitation/scheduling. \
+A reminder to complete a step that was already requested is still "next_step".
 - "offer": the company is offering the candidate the job.
 - "other": anything else (newsletters, job-alert digests, recommendations, marketing, \
 account/security emails, or emails not about a specific application by the candidate).
+
+An email that only confirms the candidate finished a step ("Thank you for completing \
+the assessment", "We received your responses") is "other", since nothing new is asked.
 
 Keywords are only hints: "thank you" also appears in rejections, and "unable" or \
 "survey" can appear in unrelated emails. Decide based on the overall meaning.
@@ -284,12 +293,19 @@ REQUIRED_ENV_VARS = [
 ]
 
 
+def fatal(title: str, message: str):
+    """Stop the run with an error shown on the Actions run page, not only in the log."""
+    gh_annotation("error", title, message)
+    sys.exit(f"ERROR: {message}")
+
+
 def check_env():
     missing = [name for name in REQUIRED_ENV_VARS if not os.environ.get(name)]
     if missing:
-        sys.exit(
-            f"ERROR: missing required environment variable(s): {', '.join(missing)}. "
-            "Add them under Settings -> Secrets and variables -> Actions."
+        fatal(
+            "Missing secrets",
+            f"Missing required secret(s): {', '.join(missing)}. "
+            "Add them under Settings -> Secrets and variables -> Actions.",
         )
 
 
@@ -305,14 +321,15 @@ def get_gmail_service():
     try:
         creds.refresh(Request())
     except RefreshError as e:
-        sys.exit(
-            f"ERROR: Gmail OAuth refresh failed: {e}\n"
+        fatal(
+            "Gmail sign-in failed",
+            f"Gmail OAuth refresh failed: {e}. "
             "Check the GMAIL_* secrets. Most often (invalid_grant) the refresh "
             "token has expired or been revoked: if your "
             "Google Cloud OAuth consent screen is in 'Testing' mode, refresh tokens "
             "expire after 7 days -- set it to 'In production' (Google Auth Platform "
             "-> Audience -> Publish app), then run get_refresh_token.py locally and "
-            "update the GMAIL_REFRESH_TOKEN secret."
+            "update the GMAIL_REFRESH_TOKEN secret.",
         )
     return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
@@ -422,6 +439,7 @@ def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
     """Call Gemini, falling back across GEMINI_MODELS and backing off on
     rate-limit / overload errors (common on the free tier)."""
     for attempt in range(attempts):
+        errors_by_model = {}
         for model in GEMINI_MODELS:
             try:
                 return client.models.generate_content(
@@ -440,13 +458,14 @@ def generate_with_retry(client: "genai.Client", prompt: str, attempts: int = 4):
             except (genai_errors.ServerError, httpx.HTTPError) as e:
                 # httpx.HTTPError covers dropped connections mid-request.
                 last_error = e
+            errors_by_model[model] = str(last_error)[:300]
             print(f"  [debug] Gemini {model} error ({last_error})")
         if attempt == attempts - 1:
             break
         wait = 15 * (attempt + 1)
         print(f"  [debug] all Gemini models failed; retrying in {wait}s")
         time.sleep(wait)
-    raise LLMUnavailableError(str(last_error))
+    raise LLMUnavailableError("; ".join(f"{m}: {e}" for m, e in errors_by_model.items()))
 
 
 def extract_with_llm(client: "genai.Client", email: dict) -> list[dict]:
@@ -603,15 +622,50 @@ def _clean_date(value) -> str:
     return value
 
 
+# Placeholder values the model sometimes returns instead of null.
+_NOT_STATED = {"unknown", "unknown role", "unknown company", "n/a", "na", "none", "null", "not specified", "not stated"}
+
+
+def _value(extracted: dict, field: str) -> str:
+    value = str(extracted.get(field) or "").strip()
+    return "" if value.lower() in _NOT_STATED else value
+
+
 def _fill_details(row: dict, extracted: dict):
     for field in JOB_DETAIL_FIELDS:
-        if not row[field] and extracted.get(field):
-            row[field] = str(extracted[field]).strip()
+        if not row[field] and _value(extracted, field):
+            row[field] = _value(extracted, field)
+
+
+def _link_host(text: str) -> str:
+    m = re.search(r"https?://([^/\s)>\]]+)", text or "")
+    return m.group(1).lower() if m else ""
+
+
+def _is_same_step(row: dict, step_type: str, details: str, due: str) -> bool:
+    """Whether a next-step email repeats the step this row already has (a
+    reminder or follow-up), rather than asking for something new. New means:
+    a different step type, a link to a different site, or a changed date."""
+    if row["status"] != STATUS_NEXT_ROUND:
+        return False
+    # Rows logged before step types were recorded have none; don't treat that as a change.
+    if row["next_step_type"] and step_type != row["next_step_type"]:
+        return False
+    old_host, new_host = _link_host(row["next_step_details"]), _link_host(details)
+    if old_host and new_host and old_host != new_host:
+        return False
+    if due and due != row["next_step_due"]:
+        # An interview being scheduled or moved always matters; for other steps
+        # only a changed deadline does (a first-seen one is just filled in).
+        if step_type == "Interview" or row["next_step_due"]:
+            return False
+    return True
 
 
 def record_email(rows: list[dict], email: dict, extracted: dict) -> tuple[str, dict]:
     """Apply one classified email to rows.
-    Returns ("added" | "updated" | "duplicate", row)."""
+    Returns ("added" | "updated" | "duplicate" | "repeat", row); a duplicate
+    confirmation or a repeat of an open next step is not news."""
     status = EMAIL_TYPE_TO_STATUS[extracted["email_type"]]
     email_date = email["internal_date"].strftime("%Y-%m-%d")
     is_next_step = status == STATUS_NEXT_ROUND
@@ -623,6 +677,16 @@ def record_email(rows: list[dict], email: dict, extracted: dict) -> tuple[str, d
             return "duplicate", row
     else:
         row = find_matching_row(rows, extracted.get("company"), extracted.get("role"))
+        if row is not None and is_next_step:
+            step_type = _value(extracted, "next_step_type") or "Other"
+            details = _value(extracted, "next_step_details")
+            due = _clean_date(extracted.get("next_step_due"))
+            if _is_same_step(row, step_type, details, due):
+                # Keep the original step and date; only fill in what was missing.
+                row["next_step_details"] = row["next_step_details"] or details
+                row["next_step_due"] = row["next_step_due"] or due
+                _fill_details(row, extracted)
+                return "repeat", row
         if row is not None:
             row["status"] = status
             row["status_updated"] = email_date
@@ -641,7 +705,7 @@ def record_email(rows: list[dict], email: dict, extracted: dict) -> tuple[str, d
             # For a status email with no logged application, the email date is
             # the best available stand-in for when it was applied.
             "date_applied": email_date,
-            "company": extracted.get("company") or "",
+            "company": _value(extracted, "company"),
             "status": status,
             "email_subject": email["subject"],
             "gmail_message_id": email["id"],
@@ -712,8 +776,12 @@ def build_summary_email(updates: list[dict], rows: list[dict]) -> tuple[str, str
         lines.append(f"{heading} ({len(group)}):")
         for r in group:
             lines.append(f"  - {r['company'] or 'Unknown company'} - {r['role'] or 'Unknown role'}")
-            if r["next_step_details"]:
-                lines.append(f"      Next step: {r['next_step_details']}")
+            if status == STATUS_NEXT_ROUND:
+                date_label = "interview" if r["next_step_type"] == "Interview" else "deadline"
+                due = _pretty_date(r["next_step_due"]) if r["next_step_due"] else "not stated"
+                lines.append(f"      Email received {_pretty_date(r['status_updated'])}; {date_label}: {due}")
+                if r["next_step_details"]:
+                    lines.append(f"      Next step: {r['next_step_details']}")
         lines.append("")
 
     totals = " / ".join(
@@ -763,36 +831,41 @@ def build_reminder_email(row: dict) -> tuple[str, str]:
             lines += ["", f"All your applications: {url}"]
         return f"Offer from {company}{role_part}", "\n".join(lines)
 
+    is_interview = row["next_step_type"] == "Interview"
+    date_label = "Interview date" if is_interview else "Deadline"
     lines = [
         f"{company} has moved your application for {what} to the next round.",
+        "",
+        f"Email received: {_pretty_date(row['status_updated'])}",
+        f"{date_label}: " + (_pretty_date(row["next_step_due"]) if row["next_step_due"] else "not stated in the email"),
         "",
         f"What to do: {row['next_step_details'] or 'See the email from ' + company + ' for details.'}",
     ]
     if row["next_step_type"]:
         lines.append(f"Type: {row['next_step_type']}")
-    if row["next_step_due"]:
-        label = "Interview date" if row["next_step_type"] == "Interview" else "Due by"
-        lines.append(f"{label}: {_pretty_date(row['next_step_due'])}")
     link = re.search(r"https?://[^\s)>\]]+", row["next_step_details"] or "")
     if link:
         lines.append(f"Link: {link.group(0)}")
+    lines.append(
+        f"Applied: {_pretty_date(row['date_applied'])}" + (f" via {row['platform']}" if row["platform"] else "")
+    )
+    if not row["next_step_due"]:
+        lines += [
+            "",
+            "Check the original email for the interview date and time."
+            if is_interview
+            else "Assessments and surveys often expire within a few days, so check the original email.",
+        ]
     lines += [
         "",
-        f"Received: {_pretty_date(row['status_updated'])}",
-        f"Applied: {_pretty_date(row['date_applied'])}" + (f" via {row['platform']}" if row["platform"] else ""),
+        "You get this email once per step. Follow-up emails about the same step "
+        "won't send another; a new step, a new interview date or a changed "
+        "deadline will.",
     ]
-    if not row["next_step_due"]:
-        note = (
-            "Check the original email for the interview date and time."
-            if row["next_step_type"] == "Interview"
-            else "Assessments and surveys often expire within a few days, so check the "
-            "original email for a deadline."
-        )
-        lines += ["", note]
     url = dashboard_url()
     if url:
         lines += ["", f"All your applications: {url}"]
-    due = f" (due {_pretty_date(row['next_step_due'])})" if row["next_step_due"] and row["next_step_type"] != "Interview" else ""
+    due = f" (due {_pretty_date(row['next_step_due'])})" if row["next_step_due"] and not is_interview else ""
     return f"Action needed: next round at {company}{role_part}{due}", "\n".join(lines)
 
 
@@ -854,7 +927,7 @@ def parse_start_date(value: str) -> datetime:
     try:
         return datetime.strptime(value.strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc)
     except ValueError:
-        sys.exit(f"ERROR: start date {value!r} is not a date like 2026-10-01 (YYYY-MM-DD).")
+        fatal("Bad start date", f"Start date {value!r} is not a date like 2026-10-01 (YYYY-MM-DD).")
 
 
 def main():
@@ -885,7 +958,9 @@ def main():
     gh_annotation("notice", "Mailbox", f"Scanning {mailbox}")
     llm = genai.Client(
         api_key=os.environ["GEMINI_API_KEY"],
-        http_options=genai_types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
+        # google-genai 3.x defaults to the v1 API, which doesn't serve the
+        # "-latest" model aliases; 2.x used v1beta.
+        http_options=genai_types.HttpOptions(api_version="v1beta", timeout=GEMINI_TIMEOUT_SECONDS * 1000),
     )
     max_minutes = float(os.environ.get("MAX_RUN_MINUTES") or DEFAULT_MAX_RUN_MINUTES)
 
@@ -964,7 +1039,7 @@ def main():
             # A row updated twice in one run (e.g. applied, then assessment)
             # is reported once, with its latest status. A repeat confirmation
             # only fills in details, so it isn't news.
-            if action != "duplicate" and not any(u is row for u in updates):
+            if action not in ("duplicate", "repeat") and not any(u is row for u in updates):
                 updates.append(row)
                 changes += 1
         persist()

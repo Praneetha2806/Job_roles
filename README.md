@@ -112,6 +112,13 @@ empty and every nightly run is a commit you can look back through:
      dates, and
    - an **"Offer from <company>"** email for each offer.
 
+   Reminders are only sent for a **new** step: the application just moved to
+   a next round, the step type changed (e.g. assessment to interview), the
+   link points to a different site, an interview was scheduled or moved, or
+   a deadline changed. Follow-up and reminder emails about a step you were
+   already told about only fill in missing details (such as a deadline), and
+   "thanks for completing your assessment" emails are ignored.
+
 ### When a company replies to an earlier application
 
 Nothing to do on your side. The next nightly run finds the reply, Gemini
