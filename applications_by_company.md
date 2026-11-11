@@ -523,7 +523,7 @@
 
 ## Cint (1)
 - **Analyst, Measurement Success, US**
-  - Applied: 2026-11-06 via SmartRecruiters — Status: Rejected (updated 2026-11-08)
+  - Applied: 2026-11-06 via SmartRecruiters — Status: Rejected (updated 2026-11-10)
 
 ## City Electric Supply (1)
 - **DATA ANALYST**
@@ -1344,13 +1344,15 @@
 - **Unknown role**
   - Applied: 2026-11-05 via LinkedIn — Status: Rejected (updated 2026-11-05)
 
-## JPMorgan Chase & Co. (3)
+## JPMorgan Chase & Co. (4)
 - **Unknown role** — Job ID: 210799256
   - Applied: 2026-10-20 via Workday — Status: Applied
 - **Unknown role** — Job ID: 210783299
   - Applied: 2026-10-26 via Workday — Status: Applied
 - **Unknown role** — Job ID: 210803192
   - Applied: 2026-10-30 via Workday — Status: Applied
+- **Data Scientist, Sr. Associate** — Job ID: 210803192
+  - Applied: 2026-11-10 via Workday — Status: Applied
 
 ## JPMorganChase (1)
 - **Data Scientist – Process Intelligence Analytics** — Job ID: 210800587
@@ -1617,6 +1619,10 @@
 ## Mphasis (1)
 - **Data Engineering** — Job ID: 29982625
   - Applied: 2026-07-30 via RippleHire — Status: Applied
+
+## Mudflap (1)
+- **Risk Operations Analyst**
+  - Applied: 2026-11-10 via Ashby — Status: Rejected (updated 2026-11-10)
 
 ## NASA’s Jet Propulsion Laboratory (JPL) (1)
 - **Data Scientist II** — Job ID: R5624
@@ -2557,7 +2563,7 @@
 - **Data Analyst**
   - Applied: 2026-11-04 via Workday — Status: Applied
 
-## Unknown (24)
+## Unknown (25)
 - **Unknown role** — Job ID: 26-25953
   - Applied: 2026-10-12 — Status: Applied
 - **Jr Data Quality Engineer**
@@ -2618,6 +2624,8 @@
   - Applied: 2026-11-02 via Indeed — Status: Applied
 - **FP&A Analyst** — Job ID: 11105
   - Applied: 2026-11-05 via Workday — Status: Applied
+- **P&C Data Analyst**
+  - Applied: 2026-11-11 via Workday — Status: Rejected (updated 2026-11-11)
 
 ## Unlearn (1)
 - **Clinical Data Scientist**
@@ -2664,7 +2672,7 @@
 
 ## Vantive (1)
 - **Data Scientist - Sciences**
-  - Applied: 2026-10-26 via Workday — Status: Applied
+  - Applied: 2026-10-26 via Workday — Status: Rejected (updated 2026-11-10)
 
 ## Varonis (1)
 - **Applied Data Scientist**
@@ -2746,7 +2754,7 @@
 
 ## Wesco (1)
 - **Analyst - Accounts Payable** — Job ID: 35822
-  - Applied: 2026-11-05 via Company Careers Page — Status: Applied
+  - Applied: 2026-11-05 via Company Careers Page — Status: Rejected (updated 2026-11-10)
 
 ## West 4th Strategy (1)
 - **Unknown role**
