@@ -195,9 +195,11 @@
 - **Data Analyst** — Job ID: 4479366446
   - Applied: 2026-10-16 via LinkedIn — Status: Applied
 
-## Ameriprise (1)
+## Ameriprise (2)
 - **Senior Research Associate - Investment Research Group**
   - Applied: 2026-10-23 via Workday — Status: Applied
+- **Digital Marketing Analyst**
+  - Applied: 2026-11-12 via Workday — Status: Rejected (updated 2026-11-12)
 
 ## Ampcus (1)
 - **Unknown role** — Job ID: 25-33264
@@ -302,9 +304,12 @@
   - Applied: 2026-11-06 via LinkedIn — Status: Applied
   - Job: Parsippany, NJ
 
-## AWG (1)
+## AWG (2)
 - **Data Engineer** — Job ID: 2087
   - Applied: 2026-10-29 via Oracle HCM — Status: Applied
+- **IT Sr. Solution Engineer – Development / Integration** — Job ID: 2180
+  - Applied: 2026-11-12 via Workday — Status: Applied
+  - Skills: Development, Integration
 
 ## Axelon (1)
 - **Unknown role** — Job ID: 26-12319
@@ -516,6 +521,10 @@
 ## CI Financial (1)
 - **Portfolio Reporting Specialist**
   - Applied: 2026-10-22 via Workday — Status: Applied
+
+## CIL (1)
+- **Analyst**
+  - Applied: 2026-11-12 via Pinpoint — Status: Applied
 
 ## Cimpress (1)
 - **Data Analyst** — Job ID: 30831087
@@ -920,10 +929,12 @@
 - **Senior Manager: Marketing Analytics** — Job ID: 21073
   - Applied: 2026-11-05 — Status: Applied
 
-## Experian (1)
+## Experian (2)
 - **Senior Data Scientist, Fraud Risk Detection**
   - Applied: 2026-10-28 via SmartRecruiters — Status: Rejected (updated 2026-11-03)
   - Next step: Take part in the online assessment experience
+- **Data Scientist, Fraud Risk Detection**
+  - Applied: 2026-11-12 via SmartRecruiters — Status: Applied
 
 ## Expert Technology Services (1)
 - **Data Analyst - IT III**
@@ -1389,6 +1400,10 @@
   - Applied: 2026-11-04 via LinkedIn — Status: Applied
   - Job: Tampa, FL
 
+## Kenway Consulting (1)
+- **Data, Analytics & Cloud Engineering Consultant**
+  - Applied: 2026-11-12 via Pinpoint — Status: Applied
+
 ## Kforce Inc (1)
 - **Data Analyst** — Job ID: 4479570012
   - Applied: 2026-10-15 via LinkedIn — Status: Applied
@@ -1532,6 +1547,10 @@
 - **Data Analyst** — Job ID: 4476691892
   - Applied: 2026-10-15 via LinkedIn — Status: Applied
 
+## McDermott Will & Schulte (1)
+- **Financial Analyst, FP&A**
+  - Applied: 2026-11-12 via Workday — Status: Applied
+
 ## McKesson (1)
 - **Data Analytics Engineer**
   - Applied: 2026-10-20 via Workday — Status: Applied
@@ -1599,6 +1618,11 @@
   - Applied: 2026-11-05 via LinkedIn — Status: Applied
   - Job: Glenview, IL
 
+## MOHR Talent (1)
+- **Data Entry & Sales Support Specialist** — Job ID: 4488244247
+  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Job: Chicago, IL
+
 ## Molson Coors Beverage Company (1)
 - **Unknown role**
   - Applied: 2026-11-06 — Status: Rejected (updated 2026-11-06)
@@ -1623,6 +1647,11 @@
 ## Mudflap (1)
 - **Risk Operations Analyst**
   - Applied: 2026-11-10 via Ashby — Status: Rejected (updated 2026-11-10)
+
+## Murphy USA (1)
+- **Enterprise Analyst I-III** — Job ID: 4489014096
+  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Job: El Dorado, AR
 
 ## NASA’s Jet Propulsion Laboratory (JPL) (1)
 - **Data Scientist II** — Job ID: R5624
@@ -1671,6 +1700,11 @@
 ## Nexxen (1)
 - **Senior Data Scientist**
   - Applied: 2026-10-28 via Ashby — Status: Applied
+
+## NielsenIQ (1)
+- **Insights Analyst** — Job ID: 4481133001
+  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Job: New Jersey, United States
 
 ## Noetik (1)
 - **Unknown role**
@@ -1987,7 +2021,7 @@
 
 ## Red Oak Sourcing (1)
 - **Information Technology Analyst** — Job ID: 4487000553
-  - Applied: 2026-11-04 via LinkedIn — Status: Applied
+  - Applied: 2026-11-04 via LinkedIn — Status: Rejected (updated 2026-11-12)
   - Job: Foxborough (Foxboro), MA
 
 ## Red Oak Technologies (1)
@@ -2275,6 +2309,10 @@
 - **Data Engineer**
   - Applied: 2026-11-03 via Lever — Status: Applied
 
+## StepStone Group (1)
+- **Junior Analyst - AI Solutions, Learning & Development**
+  - Applied: 2026-11-12 via Greenhouse — Status: Applied
+
 ## Stryker (1)
 - **Analyst, EDT Compliance** — Job ID: R574479
   - Applied: 2026-11-06 via Workday — Status: Applied
@@ -2288,15 +2326,22 @@
 - **Associate Application Analyst & Developer** — Job ID: R9850
   - Applied: 2026-11-05 via Workday — Status: Rejected (updated 2026-11-06)
 
+## Sunrise Systems (1)
+- **Unknown role** — Job ID: 26-05630
+  - Applied: 2026-11-12 — Status: Applied
+
 ## Swish Analytics (2)
 - **Machine Learning Engineer**
-  - Applied: 2026-10-26 via ZipRecruiter — Status: Applied
+  - Applied: 2026-10-26 via ZipRecruiter — Status: Rejected (updated 2026-11-12)
 - **Machine Learning Engineer**
   - Applied: 2026-10-26 via Teamtailor — Status: Applied
 
-## SynergisticIT (1)
+## SynergisticIT (2)
 - **junior data scientist/java backend developer**
   - Applied: 2026-10-26 via LinkedIn — Status: Applied
+- **junior software developer/data engineer/Scientist**
+  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Job: New York, NY
 
 ## Synthires (1)
 - **Data Scientist**
@@ -2328,6 +2373,10 @@
 - **Data Verification Analyst**
   - Applied: 2026-11-02 via LinkedIn — Status: Applied
   - Job: Colorado, United States
+
+## talentreef (1)
+- **Business Data Analyst I**
+  - Applied: 2026-11-12 via talentreef — Status: Next Round (updated 2026-11-12)
 
 ## Tantalus (1)
 - **Analytics Engineer**
@@ -2760,9 +2809,11 @@
 - **Unknown role**
   - Applied: 2026-10-21 — Status: Applied
 
-## West Monroe (1)
+## West Monroe (2)
 - **2027 Data & Analytics Consultant**
   - Applied: 2026-11-02 — Status: Rejected (updated 2026-11-04)
+- **Unknown role**
+  - Applied: 2026-11-12 — Status: Applied
 
 ## WhiteCap Workforce Solutions (1)
 - **FP&A Analyst**
@@ -2783,7 +2834,7 @@
 
 ## Wilshire Advisors LLC (1)
 - **Client Solutions Analyst** — Job ID: 9941d3e2-f561-492b-b766-cd50e4d18e86
-  - Applied: 2026-11-06 via SmartRecruiters — Status: Applied
+  - Applied: 2026-11-06 via SmartRecruiters — Status: Rejected (updated 2026-11-11)
 
 ## Wilson Bank & Trust (1)
 - **Unknown role**
@@ -2813,6 +2864,12 @@
 ## Xaxis Solutions (1)
 - **Data Scientist**
   - Applied: 2026-10-20 via LinkedIn — Status: Applied
+
+## Yoh, A Day & Zimmermann Company (1)
+- **Social Media Analyst** — Job ID: 4489971299
+  - Applied: 2026-11-12 via LinkedIn — Status: Next Round (updated 2026-11-12)
+  - Next step: Take Survey
+  - Job: Dallas, TX
 
 ## Zapcom Group (1)
 - **Senior Data Engineer**
