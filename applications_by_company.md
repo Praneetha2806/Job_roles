@@ -138,11 +138,14 @@
 - **Data Analyst** — Job ID: 4482027898
   - Applied: 2026-10-21 via LinkedIn — Status: Rejected (updated 2026-10-24)
 
-## Agoda (2)
+## Agoda (3)
 - **Data Scientist/Senior Analyst (Supply Analytics, Bangkok-based, Relocation provided)** — Job ID: 4451544920
   - Applied: 2026-10-14 via LinkedIn — Status: Rejected (updated 2026-10-15)
 - **Data Scientist/Senior Analyst (Supply Analytics, Bangkok-based, Relocation provided)**
   - Applied: 2026-10-14 — Status: Applied
+- **Marketing Analyst** — Job ID: 4480766297
+  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Job: On-site, Detroit, MI
 
 ## AHEAD (2)
 - **Unknown role**
@@ -217,6 +220,12 @@
 - **Data Analyst**
   - Applied: 2026-10-30 via LinkedIn — Status: Applied
   - Job: New York, NY
+
+## AO Premier (1)
+- **Account Manager**
+  - Applied: 2026-11-12 — Status: Next Round (updated 2026-11-12)
+  - Next step: Schedule your one-on-one video interview using the Calendly link: https://calendly.com/hir0102/interview. Zoom Link: https://us06web.zoom.us/j/2409092210 (Zoom ID: 240 909 2210).
+  - Job: Remote
 
 ## Apex Fintech Solutions (1)
 - **Unknown role**
@@ -478,6 +487,16 @@
 - **Junior Data Scientist-LOCAL CANDIDATE ONLY**
   - Applied: 2026-10-20 via Arcoro — Status: Applied
 
+## CDK Global (2)
+- **Associate Database Engineer**
+  - Applied: 2026-11-12 via Workday — Status: Applied
+- **Unknown role**
+  - Applied: 2026-11-13 via Workday — Status: Applied
+
+## CENTEGIX (1)
+- **Unknown role**
+  - Applied: 2026-11-12 via Paylocity — Status: Applied
+
 ## Center for Effective Philanthropy (1)
 - **Analyst, YouthTruth**
   - Applied: 2026-11-05 via BambooHR — Status: Applied
@@ -522,9 +541,12 @@
 - **Portfolio Reporting Specialist**
   - Applied: 2026-10-22 via Workday — Status: Applied
 
-## CIL (1)
+## CIL (2)
 - **Analyst**
   - Applied: 2026-11-12 via Pinpoint — Status: Applied
+- **Strategy Consultant**
+  - Applied: 2026-11-12 — Status: Next Round (updated 2026-11-12)
+  - Next step: Complete the online assessment to help the company learn more about your skills and abilities.
 
 ## Cimpress (1)
 - **Data Analyst** — Job ID: 30831087
@@ -681,9 +703,11 @@
 - **Data Engineer**
   - Applied: 2026-11-02 via Workable — Status: Applied
 
-## DaVita Kidney Care (1)
+## DaVita Kidney Care (2)
 - **Home Strategy and Operations Analyst** — Job ID: R0480977
   - Applied: 2026-11-06 — Status: Applied
+- **Financial Analyst**
+  - Applied: 2026-11-12 via Paradox — Status: Applied
 
 ## Dealer Tire (1)
 - **Associate Data Scientist**
@@ -1248,7 +1272,7 @@
 - **Cyber Security Analyst II**
   - Applied: 2026-10-14 via Dice — Status: Applied
 
-## Insight Global (4)
+## Insight Global (5)
 - **SQL Data Analyst** — Job ID: 4477553718
   - Applied: 2026-10-12 via LinkedIn — Status: Applied
 - **Data Collector** — Job ID: 4478118664
@@ -1258,6 +1282,9 @@
 - **Project Coordinator**
   - Applied: 2026-11-05 via LinkedIn — Status: Applied
   - Job: New York, NY
+- **Data Entry Specialist** — Job ID: 4489033263
+  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Job: Greater Chicago Area
 
 ## Inspire Brands (1)
 - **leadership opportunity**
@@ -1402,7 +1429,7 @@
 
 ## Kenway Consulting (1)
 - **Data, Analytics & Cloud Engineering Consultant**
-  - Applied: 2026-11-12 via Pinpoint — Status: Applied
+  - Applied: 2026-11-12 via Pinpoint — Status: Rejected (updated 2026-11-12)
 
 ## Kforce Inc (1)
 - **Data Analyst** — Job ID: 4479570012
@@ -1521,7 +1548,7 @@
 
 ## Marsh McLennan Agency (1)
 - **Insurance Marketing Analyst** — Job ID: R_371219
-  - Applied: 2026-11-06 via Workday — Status: Applied
+  - Applied: 2026-11-06 via Workday — Status: Rejected (updated 2026-11-13)
 
 ## Mastech (2)
 - **Analyst**
@@ -1620,7 +1647,8 @@
 
 ## MOHR Talent (1)
 - **Data Entry & Sales Support Specialist** — Job ID: 4488244247
-  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Applied: 2026-11-12 via LinkedIn — Status: Next Round (updated 2026-11-12)
+  - Next step: To help us get started, we've put together a few quick questions. Your responses will help our recruiting team get a better sense of your background before we connect.
   - Job: Chicago, IL
 
 ## Molson Coors Beverage Company (1)
@@ -2141,7 +2169,8 @@
 
 ## Serco (2)
 - **Data Analyst**
-  - Applied: 2026-11-03 — Status: Applied
+  - Applied: 2026-11-03 via Company Careers Page — Status: Rejected (updated 2026-11-12)
+  - Job: Rock Island, IL
 - **Junior Software Engineer**
   - Applied: 2026-11-03 via Company Careers Page — Status: Applied
   - Job: Remote
@@ -2377,6 +2406,7 @@
 ## talentreef (1)
 - **Business Data Analyst I**
   - Applied: 2026-11-12 via talentreef — Status: Next Round (updated 2026-11-12)
+  - Next step: See the email from talentreef for details.
 
 ## Tantalus (1)
 - **Analytics Engineer**
@@ -2612,7 +2642,7 @@
 - **Data Analyst**
   - Applied: 2026-11-04 via Workday — Status: Applied
 
-## Unknown (25)
+## Unknown (28)
 - **Unknown role** — Job ID: 26-25953
   - Applied: 2026-10-12 — Status: Applied
 - **Jr Data Quality Engineer**
@@ -2675,6 +2705,16 @@
   - Applied: 2026-11-05 via Workday — Status: Applied
 - **P&C Data Analyst**
   - Applied: 2026-11-11 via Workday — Status: Rejected (updated 2026-11-11)
+- **Data Entry/Mail Claims Representative**
+  - Applied: 2026-11-12 via Workday — Status: Applied
+  - Job: Hybrid
+- **Data Entry/Mail Claims Representative**
+  - Applied: 2026-11-12 via Workday — Status: Applied
+  - Job: Hybrid
+- **Account Manager**
+  - Applied: 2026-11-12 via Calendly — Status: Next Round (updated 2026-11-12)
+  - Next step: Remote Account Manager Interview with Lynn - Hiring Generalist at 12:00pm (Pacific Time - US & Canada) on Monday, November 16, 2026 (due 2026-11-16)
+  - Job: Remote
 
 ## Unlearn (1)
 - **Clinical Data Scientist**
@@ -2748,6 +2788,11 @@
 ## Vertical Aviation International (1)
 - **Data, BI & AI Analyst**
   - Applied: 2026-11-02 via BambooHR — Status: Applied
+
+## Vestmark (1)
+- **Associate Operations Analyst** — Job ID: 4490348680
+  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Job: Wakefield, MA
 
 ## Vestwell (1)
 - **Data Analyst**
@@ -2864,6 +2909,10 @@
 ## Xaxis Solutions (1)
 - **Data Scientist**
   - Applied: 2026-10-20 via LinkedIn — Status: Applied
+
+## Yoh (1)
+- **Social Media Analytics**
+  - Applied: 2026-11-12 — Status: Applied
 
 ## Yoh, A Day & Zimmermann Company (1)
 - **Social Media Analyst** — Job ID: 4489971299
