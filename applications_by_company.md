@@ -54,7 +54,7 @@
 
 ## Accenture (1)
 - **Inside Sales Opportunity Representative Analyst**
-  - Applied: 2026-11-13 via Workday — Status: Applied
+  - Applied: 2026-11-13 via Workday — Status: Rejected (updated 2026-11-15)
 
 ## Accenture Federal Services (2)
 - **Data Engineer**
@@ -154,7 +154,7 @@
 - **Data Scientist/Senior Analyst (Supply Analytics, Bangkok-based, Relocation provided)**
   - Applied: 2026-10-14 — Status: Applied
 - **Marketing Analyst** — Job ID: 4480766297
-  - Applied: 2026-11-12 via LinkedIn — Status: Applied
+  - Applied: 2026-11-12 via LinkedIn — Status: Rejected (updated 2026-11-15)
   - Job: On-site, Detroit, MI
 
 ## AHEAD (2)
@@ -688,7 +688,7 @@
 - **Decision Scientist (Automation & Optimization)** — Job ID: R1053070
   - Applied: 2026-10-20 via Workday — Status: Rejected (updated 2026-10-22)
 - **Analyst, Accounting** — Job ID: R1096475
-  - Applied: 2026-11-13 via Workday — Status: Applied
+  - Applied: 2026-11-13 via Workday — Status: Rejected (updated 2026-11-15)
 
 ## Cymbiotika LLC (1)
 - **Business Systems & Data Analyst** — Job ID: 53334528
@@ -988,7 +988,7 @@
   - Applied: 2026-10-28 via SmartRecruiters — Status: Rejected (updated 2026-11-03)
   - Next step: Take part in the online assessment experience
 - **Data Scientist, Fraud Risk Detection**
-  - Applied: 2026-11-12 via SmartRecruiters — Status: Applied
+  - Applied: 2026-11-12 via SmartRecruiters — Status: Rejected (updated 2026-11-14)
 
 ## Expert Technology Services (1)
 - **Data Analyst - IT III**
@@ -2283,8 +2283,8 @@
   - Applied: 2026-10-20 via SmartRecruiters — Status: Applied
 
 ## ServiceTitan (1)
-- **Data Quality Analyst**
-  - Applied: 2026-11-04 via Workday — Status: Applied
+- **Data Quality Analyst** — Job ID: JR116139
+  - Applied: 2026-11-04 via Workday — Status: Rejected (updated 2026-11-14)
 
 ## SES (2)
 - **Data Analyst - Python, PySpark, AI, LLM, AWS - ZL**
@@ -2445,9 +2445,12 @@
 - **Junior Analyst - AI Solutions, Learning & Development**
   - Applied: 2026-11-12 via Greenhouse — Status: Applied
 
-## Stryker (1)
+## Stryker (2)
 - **Analyst, EDT Compliance** — Job ID: R574479
   - Applied: 2026-11-06 via Workday — Status: Applied
+  - Job: Hybrid
+- **Analyst, EDT Compliance** — Job ID: R574479
+  - Applied: 2026-11-15 via Workday — Status: Applied
   - Job: Hybrid
 
 ## Sud Recruiting (1)
