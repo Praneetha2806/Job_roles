@@ -1393,7 +1393,7 @@
 
 ## Invita Healthcare Technologies (1)
 - **Data Engineer II**
-  - Applied: 2026-11-13 via Rippling — Status: Applied
+  - Applied: 2026-11-13 via Rippling — Status: Rejected (updated 2026-11-16)
 
 ## ISO New England (1)
 - **Market Operations Analyst**
@@ -1605,8 +1605,8 @@
   - Job: Washington DC-Baltimore Area
 
 ## Machinify (1)
-- **Unknown role**
-  - Applied: 2026-10-20 via Greenhouse — Status: Applied
+- **Data Mining Analyst**
+  - Applied: 2026-10-20 via Greenhouse — Status: Rejected (updated 2026-11-16)
 
 ## Manulife (1)
 - **Operations Analyst**
@@ -2759,7 +2759,7 @@
 - **Data Analyst**
   - Applied: 2026-11-04 via Workday — Status: Applied
 
-## Unknown (32)
+## Unknown (33)
 - **Unknown role** — Job ID: 26-25953
   - Applied: 2026-10-12 — Status: Applied
 - **Jr Data Quality Engineer**
@@ -2840,6 +2840,10 @@
   - Applied: 2026-11-13 via Workday — Status: Applied
 - **Clinical Systems Analyst**
   - Applied: 2026-11-13 via Indeed — Status: Applied
+- **Remote Account Manager**
+  - Applied: 2026-11-15 via Calendly — Status: Next Round (updated 2026-11-15)
+  - Next step: Zoom details for interview tomorrow at 12:00pm (Pacific Time - US & Canada) (due 2026-11-16)
+  - Job: Remote
 
 ## Unlearn (1)
 - **Clinical Data Scientist**
@@ -2988,8 +2992,8 @@
 ## West Monroe (2)
 - **2027 Data & Analytics Consultant**
   - Applied: 2026-11-02 — Status: Rejected (updated 2026-11-04)
-- **Unknown role**
-  - Applied: 2026-11-12 — Status: Applied
+- **Data Engineer**
+  - Applied: 2026-11-12 — Status: Rejected (updated 2026-11-15)
 
 ## WhiteCap Workforce Solutions (1)
 - **FP&A Analyst**
