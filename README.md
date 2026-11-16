@@ -1,6 +1,6 @@
 # Job Application Tracker
 
-Reads job-application emails from Gmail every night and keeps track of every
+Reads job-application emails from Gmail once a day and keeps track of every
 application you have sent: confirmations, rejections, and next-round
 invitations (assessments, surveys, interviews). It runs free on GitHub Actions
 and the Gemini free tier, with no server to maintain.
@@ -11,8 +11,8 @@ Each run:
 
 - updates `applications.csv` and `applications_by_company.md` on the repo's
   `data` branch,
-- emails you a summary on days with updates, and a separate "Action
-  needed" reminder for each application that moves to a next round
+- emails you a summary on days with updates, and one "Action needed"
+  email per next round with the date it arrived and the deadline
   (optional), and
 - refreshes your dashboard at `https://<your-username>.github.io/<repo-name>/`
   (once GitHub Pages is on).
@@ -35,11 +35,12 @@ job emails go to.
    first day to track (e.g. two weeks ago, as `YYYY-MM-DD`), and run it. It
    creates your own `data` branch.
 4. **Turn on the dashboard:** see [Dashboard](#dashboard).
-5. **Optional:** change the nightly time for your time zone (see
+5. **Optional:** change the daily time for your time zone (see
    [Setup](#setup) step 6), and edit the keyword lists for the wording your
    emails use (see [How it works](#how-it-works)).
 
-From then on it runs every night by itself.
+From then on it runs once a day by itself (see [Run it](#6-run-it) for
+when).
 
 > **Privacy:** in a public repo, anyone can open the `data` branch and the
 > dashboard, so the companies and roles you applied to are visible. To keep
@@ -53,15 +54,15 @@ From then on it runs every night by itself.
 | File | What it is |
 |---|---|
 | `track_applications.py` | The tracker: searches Gmail, classifies emails with Gemini, updates the CSV, sends the summary email |
-| `.github/workflows/track-applications.yml` | Runs the tracker nightly and commits the results to the `data` branch |
+| `.github/workflows/track-applications.yml` | Runs the tracker once a day and commits the results to the `data` branch |
 | `.github/workflows/publish-dashboard.yml` | Publishes the dashboard to GitHub Pages after every run |
 | `index.html` | The dashboard |
 | `get_refresh_token.py` | One-time helper you run on your own computer to create the Gmail token |
-| `requirements.txt` | Python packages the workflow installs |
+| `requirements.txt` | Python packages the workflow installs, capped below their next major version (see [Library versions](#library-versions)) |
 | `LICENSE` | MIT license: anyone may use, copy and change this code |
 
 The data lives on a separate **`data` branch**, so copies of the code start
-empty and every nightly run is a commit you can look back through:
+empty and every run is a commit you can look back through:
 
 | File on `data` | What it is |
 |---|---|
@@ -78,11 +79,13 @@ empty and every nightly run is a commit you can look back through:
    It skips Gmail's Promotions and Social tabs and LinkedIn/Indeed job-alert
    digests, which are mostly noise.
 2. **Classify each email with Gemini.** Each email's sender, subject and body
-   are sent to Google Gemini (free tier), along with which keywords matched
-   as hints. Gemini decides whether it is a confirmation, a rejection, a next
+   are sent to Google Gemini (free tier: `gemini-flash-latest`, falling back
+   to `gemini-flash-lite-latest` when it is busy), along with which keywords
+   matched as hints. Gemini decides whether it is a confirmation, a rejection, a next
    step, or something else, and extracts the company, role, platform, job ID,
    skills and next-step details. Keywords alone are not enough, because
-   "thank you" also appears in rejections.
+   "thank you" also appears in rejections. An email about several
+   applications at once is recorded as several applications.
 3. **Update the CSV.**
 
    | Email type | Keywords it looks for | What happens in `applications.csv` |
@@ -92,41 +95,62 @@ empty and every nightly run is a commit you can look back through:
    | Next step | assessment, survey, next round, next step, interview, coding challenge, online test, HackerRank, CodeSignal | That application's row changes to `Next Round`, with the step type, due date and link |
    | Offer | offer letter, pleased to offer, job offer | That application's row changes to `Offer` |
 
-   A rejection or next-step email is matched to an existing row by company,
-   preferring the same role, then the most recent application. If no
-   application was logged for that company, a new row is added with that
-   status. Emails are handled oldest first, so a confirmation is logged
+   A rejection or next-step email is matched to an existing row at the same
+   company with the same role (titles match when one contains the other or
+   they share most words, so "Sr Data Analyst" matches "Senior Data
+   Analyst"). If the email names no role, the most recent application at
+   that company is used. If no matching application was logged, a new row
+   is added with that status. Emails are handled oldest first, so a confirmation is logged
    before a later rejection for the same job. A second confirmation for the
    same company and role within 3 days (for example LinkedIn's "application
    sent" plus the company's own email) only fills in missing details instead
    of adding a duplicate row.
 4. **Save and commit.** Progress is saved after every email. The workflow
-   commits the CSV, summary and state back to the repo, even if a run fails
-   partway, so finished work is never lost.
+   commits the CSV, summary and state to the `data` branch even if a run
+   fails, is cancelled or times out, so finished work is never lost. A run
+   stops taking new emails after 40 minutes and leaves the rest for the next
+   run. An email that can't be processed is skipped with a warning instead of
+   stopping the run.
 5. **Email you** (optional, only on days with updates):
    - a summary of new applications, next rounds with their links,
      rejections, and overall totals, and
-   - a separate **"Action needed: next round at <company>"** reminder for each
-     application that moved to a next round, with what to do, the type, the
-     due date or interview date when the email gives one, the link, and the
-     dates, and
+   - one **"Action needed: next round at <company>"** email per next round,
+     and
    - an **"Offer from <company>"** email for each offer.
 
-   Reminders are only sent for a **new** step: the application just moved to
-   a next round, the step type changed (e.g. assessment to interview), the
-   link points to a different site, an interview was scheduled or moved, or
-   a deadline changed. Follow-up and reminder emails about a step you were
+   The next-round email starts with the two dates that matter, then the
+   details:
+
+   ```
+   Subject: Action needed: next round at Nimbus - Data Analyst (due Oct 31, 2026)
+
+   Email received: Oct 27, 2026
+   Deadline: Oct 31, 2026      ("Interview date" for interviews; "not stated in the email" when unknown)
+
+   What to do: Complete CodeSignal assessment
+   Type: Assessment
+   Link: https://...
+   Applied: Oct 27, 2026 via LinkedIn
+   ```
+
+   It is sent **once per step**. Another one is sent only when something new
+   happens: the step type changes (e.g. assessment to interview), the link
+   points to a different site, an interview is scheduled or moved, or a
+   deadline changes. Follow-up and reminder emails about a step you were
    already told about only fill in missing details (such as a deadline), and
-   "thanks for completing your assessment" emails are ignored.
+   "thanks for completing your assessment" emails are ignored. The daily
+   summary lists each next round the same way, with the date received and
+   the deadline.
 
 ### When a company replies to an earlier application
 
-Nothing to do on your side. The next nightly run finds the reply, Gemini
+Nothing to do on your side. The next daily run finds the reply, Gemini
 reads it, and the tracker finds that application's existing row in
 `applications.csv` (same company, preferring the same role) and changes its
 status, instead of adding a new row. The run commits the updated CSV to the
-`data` branch, and the dashboard is republished a minute or two later. Replies are picked up at the nightly run, or
-sooner if you run the workflow by hand.
+`data` branch, and the dashboard is republished a minute or two later. Replies
+are picked up at the next daily run, or sooner if you run the workflow by
+hand.
 
 To change the keywords, edit `CONFIRMATION_PHRASES`, `REJECTION_PHRASES`,
 `NEXT_STEP_PHRASES` and `OFFER_PHRASES` near the top of `track_applications.py`.
@@ -253,18 +277,33 @@ Settings → Secrets and variables → Actions → **New repository secret**:
 
 ### 6. Run it
 
-The workflow runs every night at 06:55 UTC: 11:55 PM Pacific during daylight
-saving time, 10:55 PM in winter. For another time zone, change the `cron`
-line in `.github/workflows/track-applications.yml`; it is in UTC (for
-example `"30 18 * * *"` is midnight in India). To run it now: **Actions →
-Track Job Applications → Run workflow**. The first time, set **start_date**
-to the first day you want tracked; otherwise it looks back 7 days.
+The workflow is scheduled once a day at **06:55 UTC** (10:55 PM Pacific in
+winter, 11:55 PM in summer), set by the `cron` line in
+`.github/workflows/track-applications.yml`. Cron times are in UTC; for
+example `"30 18 * * *"` is midnight in India.
+
+GitHub starts scheduled runs **late when its servers are busy**, and this
+one has usually started 7–9 hours late (around 6–7:30 AM Pacific). That is
+fine for a daily tracker: each run picks up everything since the last one,
+and starting after midnight Pacific means Gemini's daily limit has just
+reset. If you need it sooner, run it by hand: **Actions → Track Job
+Applications → Run workflow**. The first time, set **start_date** to the
+first day you want tracked; otherwise it looks back 7 days.
 
 ## Day-to-day
 
-- **See what a run did:** open the run in the Actions tab. The summary at the
-  top shows the mailbox it read, how many emails it checked and recorded,
-  whether the email was sent, and any warning or crash.
+- **See what a run did:** open the run in the Actions tab. The messages at
+  the top of the run page say what happened:
+
+  | Message | Meaning |
+  |---|---|
+  | Mailbox | The Gmail account it read |
+  | Summary | How many emails it checked and how many updates it recorded |
+  | Email sent / Next-round reminders | The summary email, and how many next-round or offer emails went out |
+  | Gemini unavailable | Gemini was busy or out of daily quota; the rest is retried next run |
+  | Time limit reached | It stopped after 40 minutes; the next run continues |
+  | Skipped emails | Emails it couldn't process, with the reason; the rest were recorded |
+  | Gmail sign-in failed / Missing secrets / Tracker crashed | The run stopped; see Troubleshooting |
 - **Re-scan from an earlier date:** **Run workflow** with **start_date** set
   (e.g. `2026-10-01`). Emails already processed are skipped, so nothing is
   counted twice.
@@ -288,16 +327,28 @@ to the first day you want tracked; otherwise it looks back 7 days.
 | "The setting you are looking for is not available" on the App passwords page | 2-Step Verification is off, or uses only a passkey or security key. Add a phone number as a second step (Setup 4.1). |
 | Warning "Gemini unavailable" on a run | Gemini was busy or the daily limit was reached. Nothing is lost; the next run retries those emails. |
 | Warning "Email not sent" or "Reminder not sent" | Check the `GMAIL_APP_PASSWORD` and `NOTIFY_EMAIL` secrets. A new App Password is needed if 2-Step Verification was turned off and on again. |
+| Run fails with only "Process completed with exit code 1" and no other message | The tracker couldn't start, usually because a Python library changed. This happened when google-genai 3.0 came out; `requirements.txt` now caps versions to prevent it. Open the run's **Run application tracker** step log to see the error. |
+| Warning "Gemini unavailable" mentioning `404 NOT_FOUND` | Google retired or renamed a model. Change `GEMINI_MODELS` near the top of `track_applications.py` to current model names. |
 | Workflow shows "disabled" | GitHub turns off scheduled workflows after 60 days without repo activity. **Actions → Track Job Applications → Enable workflow**. |
 | Run fails with "start date … is not a date like 2026-10-01" | Type the start date as `YYYY-MM-DD`. |
 | The dashboard or CSV shows someone else's applications | Your copy included the original `data` branch. Run the workflow once with **reset** set to `RESET`. |
 | Dashboard shows "Couldn't load your applications" or the Pages address shows 404 | Check that Settings → Pages → Source is **GitHub Actions**, then run **Actions → Publish dashboard → Run workflow**. |
+
+## Library versions
+
+`requirements.txt` allows newer minor versions but not the next major
+version of each library (for example `google-genai>=2.33.0,<4`), so a
+breaking release can't stop the daily run without warning. To move to a new
+major version, raise the cap, run the workflow by hand, and check the run
+page for errors.
 
 ## Ideas for later
 
 - Add filters to the dashboard (date range, platform, role type).
 - Re-read older emails to fill in the newer columns for past applications.
 - A weekly digest of open next rounds whose due date is near.
+- A way to mark a next round as done, so the dashboard's "to do" list only
+  shows steps you haven't finished.
 
 ## License
 

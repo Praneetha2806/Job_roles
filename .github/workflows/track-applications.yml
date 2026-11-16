@@ -2,11 +2,9 @@ name: Track Job Applications
 
 on:
   schedule:
-    # 23:55 America/Los_Angeles.
-    # GitHub Actions cron is UTC only, so this covers PDT (UTC-7); during PST
-    # (UTC-8, roughly Nov-Mar) it will run at ~22:55 PT instead. Adjust the
-    # hour by 1 around DST changes if exact EOD timing matters to you, or
-    # keep two schedule entries and let the no-op runs be harmless.
+    # Once a day at 06:55 UTC (cron is always UTC): 23:55 Pacific in summer,
+    # 22:55 in winter. GitHub often starts scheduled runs hours late when it
+    # is busy; each run catches up on everything since the last one.
     - cron: "55 6 * * *"
   # Run it by hand from the Actions tab ("Run workflow"), optionally with:
   workflow_dispatch:
