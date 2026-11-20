@@ -23,7 +23,7 @@
 
 ## AAA (1)
 - **Data Scientist 1**
-  - Applied: 2026-10-15 via Workday — Status: Rejected (updated 2026-10-25)
+  - Applied: 2026-10-15 via Workday — Status: Rejected (updated 2026-11-19)
 
 ## AARATECH (2)
 - **Data Analyst**
@@ -739,6 +739,10 @@
 - **Master Data Analyst** — Job ID: 4479050863
   - Applied: 2026-10-14 via LinkedIn — Status: Applied
 
+## Cooper Standard (1)
+- **Sales Analyst**
+  - Applied: 2026-11-19 via Workday — Status: Rejected (updated 2026-11-19)
+
 ## CooperStandard (1)
 - **Unknown role**
   - Applied: 2026-11-16 via Workday — Status: Applied
@@ -1412,7 +1416,7 @@
   - Next step: Your profile has successfully passed the initial screening stage. Our team is preparing the next steps in the process and selected candidates will be invited to interviews.
   - Skills: AI & Data Analytics, Data Scientist
 - **Data Specialist-Operations Specialist** — Job ID: 144428
-  - Applied: 2026-11-16 via Company Careers Page — Status: Applied
+  - Applied: 2026-11-16 via Company Careers Page — Status: Rejected (updated 2026-11-18)
 
 ## Ibotta (1)
 - **Data Scientist, Strategic Partner Analytics**
@@ -1579,7 +1583,7 @@
 
 ## Iterative Health (1)
 - **Clinical Data Specialist - Collections - Temporary**
-  - Applied: 2026-11-05 via LinkedIn — Status: Applied
+  - Applied: 2026-11-05 via LinkedIn — Status: Rejected (updated 2026-11-19)
   - Job: Temporary, Cambridge, MA
 
 ## J.Crew Group (1)
@@ -1705,7 +1709,7 @@
   - Applied: 2026-11-05 via Rippling — Status: Rejected (updated 2026-11-05)
 
 ## Labcorp (1)
-- **RCM Data Analyst I - Hybrid**
+- **RCM Data Analyst I - Hybrid** — Job ID: 2638586
   - Applied: 2026-11-18 via Workday — Status: Applied
   - Job: Hybrid
 
@@ -2085,7 +2089,7 @@
 
 ## Obviant (1)
 - **Data Scientist**
-  - Applied: 2026-11-17 via Ashby — Status: Applied
+  - Applied: 2026-11-17 via Ashby — Status: Rejected (updated 2026-11-19)
 
 ## Odesus, Inc. (1)
 - **Data Analyst**
@@ -2281,6 +2285,10 @@
   - Applied: 2026-10-15 via LinkedIn — Status: Applied
 - **Utility Data Analyst** — Job ID: 4479163995
   - Applied: 2026-10-16 via LinkedIn — Status: Applied
+
+## Primerica (1)
+- **Unknown role**
+  - Applied: 2026-11-19 via Workday — Status: Rejected (updated 2026-11-19)
 
 ## Prominds Business Consulting Inc (1)
 - **Technical Data Analyst**
@@ -2825,7 +2833,7 @@
 
 ## Tarkett (1)
 - **Analytics Developer**
-  - Applied: 2026-11-13 via Workday — Status: Applied
+  - Applied: 2026-11-13 via Workday — Status: Rejected (updated 2026-11-19)
 
 ## Tarro (2)
 - **Data Scientist**
