@@ -1383,7 +1383,8 @@
 
 ## FULLBEAUTY Brands (1)
 - **Temporary Inventory Planning Analyst** — Job ID: 4482096593
-  - Applied: 2026-10-21 via LinkedIn — Status: Applied
+  - Applied: 2026-10-21 via LinkedIn — Status: Rejected (updated 2026-11-23)
+  - Job: Temporary
 
 ## Fusion92 (1)
 - **Data Scientist**
@@ -1513,7 +1514,7 @@
 
 ## Harmattan AI (1)
 - **Quality Engineer**
-  - Applied: 2026-11-21 via Ashby — Status: Applied
+  - Applied: 2026-11-21 via Ashby — Status: Rejected (updated 2026-11-23)
 
 ## Hasbro (1)
 - **Account Analyst**
@@ -1981,7 +1982,7 @@
 
 ## Loft Orbital Solutions (1)
 - **Flight Dynamics Software Engineer**
-  - Applied: 2026-11-21 via Lever — Status: Applied
+  - Applied: 2026-11-21 via Lever — Status: Rejected (updated 2026-11-22)
 
 ## Logistic Dynamics (1)
 - **Quality Analyst**
@@ -2230,6 +2231,10 @@
 ## Nemetschek Group (1)
 - **Data Engineer III**
   - Applied: 2026-11-16 via SmartRecruiters — Status: Applied
+
+## Nemetschek SE2 (1)
+- **Data Engineer III**
+  - Applied: 2026-11-23 via SmartRecruiters — Status: Rejected (updated 2026-11-23)
 
 ## Neotecra, Inc (1)
 - **Data Analyst – Security Operations**
