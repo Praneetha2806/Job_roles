@@ -99,6 +99,10 @@
 - **Junior Data Analyst**
   - Applied: 2026-10-12 via Dice — Status: Applied
 
+## ActioNet (1)
+- **Data Engineer**
+  - Applied: 2026-11-24 via Jobvite — Status: Applied
+
 ## Addison Group (4)
 - **Financial Analyst**
   - Applied: 2026-10-15 via ZipRecruiter — Status: Applied
@@ -202,6 +206,10 @@
 ## Aircall.io, Inc. (1)
 - **Data Scientist, Product Analytics**
   - Applied: 2026-10-23 via Greenhouse — Status: Applied
+
+## Albert Uster Imports (1)
+- **Senior Business Applications Analyst**
+  - Applied: 2026-11-24 via Greenhouse — Status: Applied
 
 ## Align Communications (1)
 - **Data Center Project Associate**
@@ -1288,7 +1296,7 @@
 
 ## EvenUp (1)
 - **Data Migration Specialist**
-  - Applied: 2026-11-21 via Ashby — Status: Applied
+  - Applied: 2026-11-21 via Ashby — Status: Rejected (updated 2026-11-24)
 
 ## Everest (1)
 - **Data Analyst**
@@ -2046,6 +2054,10 @@
 - **Senior Data Scientist**
   - Applied: 2026-10-28 — Status: Applied
 
+## LlamaIndex (1)
+- **Business Development Representative (BDR)**
+  - Applied: 2026-11-24 via Ashby — Status: Applied
+
 ## Lockheed Martin (3)
 - **Data Scientist Sr - E3** — Job ID: 19865
   - Applied: 2026-10-20 via SuccessFactors — Status: Next Round (updated 2026-10-20)
@@ -2460,11 +2472,13 @@
 - **Unknown role**
   - Applied: 2026-10-29 — Status: Applied
 
-## OpenAI (2)
+## OpenAI (3)
 - **Unknown role**
   - Applied: 2026-11-04 — Status: Applied
 - **Unknown role**
   - Applied: 2026-11-17 — Status: Applied
+- **Unknown role**
+  - Applied: 2026-11-24 — Status: Applied
 
 ## OpenLoop Health (1)
 - **Data Analyst II**
@@ -3187,6 +3201,10 @@
 - **Unknown role** — Job ID: 26-05630
   - Applied: 2026-11-12 — Status: Applied
 
+## SuperDial (1)
+- **Business Operations & Strategy Associate**
+  - Applied: 2026-11-24 via Ashby — Status: Applied
+
 ## Swish Analytics (2)
 - **Machine Learning Engineer**
   - Applied: 2026-10-26 via ZipRecruiter — Status: Rejected (updated 2026-11-12)
@@ -3468,11 +3486,13 @@
   - Applied: 2026-11-13 via LinkedIn — Status: Applied
   - Job: Manhattan, NY
 
-## Tyler Technologies (2)
+## Tyler Technologies (3)
 - **Product Analyst, AI Solutions**
   - Applied: 2026-10-12 — Status: Applied
 - **ML/AI Data and Cloud Engineer**
   - Applied: 2026-11-04 via Company Careers Page — Status: Applied
+- **Business Analyst**
+  - Applied: 2026-11-24 via Company Careers Page — Status: Applied
 
 ## Tyson Foods (1)
 - **Data Engineer I**
@@ -3536,7 +3556,7 @@
 - **Data Analyst**
   - Applied: 2026-11-04 via Workday — Status: Applied
 
-## Unknown (91)
+## Unknown (97)
 - **Unknown role** — Job ID: 26-25953
   - Applied: 2026-10-12 — Status: Applied
 - **Jr Data Quality Engineer**
@@ -3749,6 +3769,20 @@
 - **Senior Warehouse Mgmt. Systems (WMS) Analyst**
   - Applied: 2026-11-23 via talentreef — Status: Next Round (updated 2026-11-23)
   - Next step: Additional steps requested for your application.
+- **Senior Business Applications Analyst**
+  - Applied: 2026-11-24 via Indeed — Status: Applied
+- **Senior Program Analyst - Data Architecture & Strategy**
+  - Applied: 2026-11-24 via Indeed — Status: Applied
+- **FTZ Data Analyst**
+  - Applied: 2026-11-24 via Indeed — Status: Applied
+  - Job: Full-time
+- **Data Analyst**
+  - Applied: 2026-11-24 via Indeed — Status: Applied
+- **FTZ Data Analyst**
+  - Applied: 2026-11-24 via Paycom — Status: Applied
+  - Job: Full-time
+- **Business Analyst III**
+  - Applied: 2026-11-24 via Indeed — Status: Applied
 
 ## Unlearn (1)
 - **Clinical Data Scientist**
@@ -3904,7 +3938,7 @@
 - **Analyst - Accounts Payable** — Job ID: 35822
   - Applied: 2026-11-05 via Company Careers Page — Status: Rejected (updated 2026-11-10)
 - **Analyst - Business Data** — Job ID: 36318
-  - Applied: 2026-11-20 via Company Careers Page — Status: Applied
+  - Applied: 2026-11-20 via Company Careers Page — Status: Rejected (updated 2026-11-24)
 
 ## West 4th Strategy (1)
 - **Unknown role**
@@ -3977,6 +4011,10 @@
 ## Xaxis Solutions (1)
 - **Data Scientist**
   - Applied: 2026-10-20 via LinkedIn — Status: Applied
+
+## Xcelerate Solutions (1)
+- **Data/Insider Threat Analyst - Top Secret**
+  - Applied: 2026-11-24 via Jobvite — Status: Applied
 
 ## Yes Energy (1)
 - **Data Engineer II**
